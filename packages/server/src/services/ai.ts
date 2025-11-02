@@ -45,7 +45,7 @@ export const reverseGeocodeWithAI = async (lat: number, lon: number): Promise<Ad
             },
         });
         
-        const jsonStr = response.text.trim();
+        const jsonStr = response.text?.trim() ?? '';
         if (!jsonStr) {
             throw new Error("Received an empty response from the AI for geocoding.");
         }
