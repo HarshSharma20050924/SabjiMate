@@ -46,25 +46,18 @@ router.post('/process-audio-order', upload.single('audio'), async (req: Request,
                     items: {
                         type: Type.OBJECT,
                         properties: {
-                            vegetable: {
-                                type: Type.STRING,
-                                description: 'The name of the vegetable in English or Hindi.',
-                            },
-                            quantity: {
-                                type: Type.STRING,
-                                description: "The quantity. Must be one of: '100g', '250g', '500g', '1kg'.",
-                            },
+                            vegetable: { type: Type.STRING, description: 'The name of the vegetable in English or Hindi.' },
+                            quantity: { type: Type.STRING, description: "The quantity. Must be one of: '100g', '250g', '500g', '1kg'." },
                         },
                         required: ["vegetable", "quantity"],
                     },
                 },
             },
         });
-        
-        const jsonStr = response.text?.trim() ?? '';
-        if (!jsonStr) {
-            throw new Error("Received an empty response from the AI.");
-        }
+
+        // TS18048 fix
+        const jsonStr = (typeof response.text === 'string' ? response.text.trim() : '');
+        if (!jsonStr) throw new Error("Received an empty response from the AI.");
         const parsedItems = JSON.parse(jsonStr);
 
         res.json(parsedItems);
@@ -100,25 +93,18 @@ router.post('/recipe-of-the-day', async (req: Request, res: Response) => {
                     properties: {
                         recipeName: { type: Type.STRING },
                         description: { type: Type.STRING },
-                        ingredients: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
-                        },
-                        instructions: {
-                            type: Type.ARRAY,
-                            items: { type: Type.STRING }
-                        }
+                        ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
+                        instructions: { type: Type.ARRAY, items: { type: Type.STRING } }
                     },
                     required: ["recipeName", "description", "ingredients", "instructions"],
                 },
             },
         });
-        
-        const jsonStr = response.text?.trim() ?? '';
-        if (!jsonStr) {
-            throw new Error("Received an empty response from the AI for recipe generation.");
-        }
+
+        const jsonStr = (typeof response.text === 'string' ? response.text.trim() : '');
+        if (!jsonStr) throw new Error("Received an empty response from the AI for recipe generation.");
         const recipe = JSON.parse(jsonStr);
+
         res.json(recipe);
 
     } catch (error) {
@@ -135,9 +121,7 @@ router.post('/reverse-geocode', async (req: Request, res: Response) => {
 
     try {
         const addressDetails = await reverseGeocode(lat, lon);
-        if (!addressDetails) {
-            return res.status(500).json({ error: 'Could not perform reverse geocoding.' });
-        }
+        if (!addressDetails) return res.status(500).json({ error: 'Could not perform reverse geocoding.' });
         res.json(addressDetails);
     } catch (error) {
         logger.error(error, "Error in reverse geocode route");
@@ -148,10 +132,8 @@ router.post('/reverse-geocode', async (req: Request, res: Response) => {
 router.post('/chat', async (req: Request, res: Response) => {
     const { history, message, systemInstruction } = req.body as { history: ChatMessage[], message: string, systemInstruction: string };
 
-    if (!message) {
-        return res.status(400).json({ error: 'A message is required.' });
-    }
-     if (!process.env.API_KEY) {
+    if (!message) return res.status(400).json({ error: 'A message is required.' });
+    if (!process.env.API_KEY) {
         logger.error("Gemini API key is not configured on the server.");
         return res.status(500).json({ error: 'Server is not configured for AI processing.' });
     }
@@ -159,27 +141,18 @@ router.post('/chat', async (req: Request, res: Response) => {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
-        // Combine history and the new message to send in a single generateContent call
         const contents: Content[] = [
-            ...history.map(msg => ({
-                role: msg.role,
-                parts: [{ text: msg.text }]
-            })),
-            {
-                role: 'user', // The new message is always from the user
-                parts: [{ text: message }]
-            }
+            ...history.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] })),
+            { role: 'user', parts: [{ text: message }] }
         ];
-        
+
         const response: GenerateContentResponse = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: contents, // Pass the full conversation history
-            config: {
-                systemInstruction: systemInstruction,
-            },
+            contents,
+            config: { systemInstruction }
         });
-        
-        const textResponse = response.text?.trim() ?? '';
+
+        const textResponse = (typeof response.text === 'string' ? response.text.trim() : '');
         res.json({ response: textResponse });
 
     } catch (error) {
@@ -187,6 +160,5 @@ router.post('/chat', async (req: Request, res: Response) => {
         res.status(500).json({ error: 'Failed to get a response from the AI assistant.' });
     }
 });
-
 
 export default router;
