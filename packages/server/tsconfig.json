@@ -3,7 +3,7 @@
     "target": "ES2020",
     "module": "CommonJS",
     "outDir": "./dist",
-    "rootDirs": ["./src", "../common"],
+    "rootDir": "./src",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
@@ -17,14 +17,6 @@
     "noFallthroughCasesInSwitch": true,
     "allowJs": true
   },
-  "include": [
-    "src/**/*",
-    "../common/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/config/passport.ts",
-    "src/routes/orders.ts"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }
