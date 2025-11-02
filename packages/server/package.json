@@ -4,13 +4,15 @@
   "main": "dist/index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node dist/index.js",
-    "dev": "cross-env NODE_ENV=development ts-node-dev --respawn src/index.ts",
-    "build": "prisma migrate deploy && prisma generate && tsc",
-    "migrate": "prisma migrate dev",
-    "seed": "prisma db seed",
-    "check": "tsc --noEmit"
-  },
+  "prestart": "npm run build",
+  "start": "cross-env NODE_ENV=production node dist/index.js",
+  "dev": "cross-env NODE_ENV=development ts-node-dev --respawn src/index.ts",
+  "build": "prisma migrate deploy && prisma generate && tsc",
+  "migrate": "prisma migrate dev",
+  "seed": "prisma db seed",
+  "check": "tsc --noEmit"
+},
+
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
