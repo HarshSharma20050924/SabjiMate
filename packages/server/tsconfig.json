@@ -9,7 +9,7 @@
     "strict": true,
     "skipLibCheck": true,
     "moduleResolution": "node",
-    "types": ["node"],
+    "types": ["node", "vitest"],
     "resolveJsonModule": true,
     "noImplicitAny": true,
     "noUnusedLocals": false,
