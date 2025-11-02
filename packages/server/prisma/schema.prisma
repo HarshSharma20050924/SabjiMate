@@ -1,0 +1,231 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // or "mysql", "sqlite", etc.
+  url      = env("DATABASE_URL")
+}
+
+// --- Enums ---
+enum Role {
+  USER
+  ADMIN
+  DRIVER
+}
+
+enum PaymentPreference {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID_CASH
+  PAID_ONLINE
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+// --- Models ---
+
+model User {
+  phone                 String                 @id
+  name                  String
+  address               String?
+  image                 String?
+  city                  String?
+  state                 String?
+  latitude              Float?
+  longitude             Float?
+  role                  Role                   @default(USER)
+  password              String?
+  paymentPreference     PaymentPreference?
+  fcmToken              String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @default(now())
+
+  sales                 Sale[]
+  deliveryConfirmations DeliveryConfirmation[]
+  wishlists             Wishlist[]
+  standingOrders        StandingOrder[]
+  reviews               Review[]
+
+  @@index([role])
+}
+
+model Vegetable {
+  id              Int             @id @default(autoincrement())
+  name            Json
+  marketPrice     Float
+  sabzimatePrice  Float
+  unit            Json
+  image           String
+  offerTag        String?
+  description     String?
+  category        String?
+  isAvailable     Boolean         @default(true)
+  
+  // Aggregated rating fields
+  averageRating   Float?
+  ratingCount     Int             @default(0)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  wishlistItems   WishlistItem[]
+  standingOrders  StandingOrder[]
+  saleItems       SaleItem[]
+  locationPrices  LocationPrice[]
+  reviews         Review[]
+  
+  @@unique([name])
+  @@index([isAvailable])
+}
+
+model Sale {
+  id            Int           @id @default(autoincrement())
+  userId        String
+  date          DateTime      @db.Date
+  total         Float
+  paymentStatus PaymentStatus @default(UNPAID)
+  isUrgent      Boolean       @default(false)
+  couponCode    String?
+  createdAt     DateTime      @default(now())
+
+  user          User          @relation(fields: [userId], references: [phone])
+  items         SaleItem[]
+  coupon        Coupon?       @relation(fields: [couponCode], references: [code])
+
+  @@index([userId])
+  @@index([date])
+  @@index([paymentStatus])
+}
+
+model SaleItem {
+  id            Int       @id @default(autoincrement())
+  saleId        Int
+  vegetableId   Int
+  vegetableName String
+  quantity      String
+  price         Float
+
+  sale          Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  vegetable     Vegetable @relation(fields: [vegetableId], references: [id])
+  review        Review?
+
+  @@index([saleId])
+  @@index([vegetableId])
+}
+
+model Review {
+  id          Int      @id @default(autoincrement())
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now())
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [phone])
+  
+  vegetableId Int
+  vegetable   Vegetable @relation(fields: [vegetableId], references: [id])
+
+  saleItemId  Int      @unique // A sale item can only be reviewed once
+  saleItem    SaleItem @relation(fields: [saleItemId], references: [id])
+  
+  @@index([userId])
+  @@index([vegetableId])
+}
+
+
+model DeliveryConfirmation {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  date      DateTime @db.Date
+  choice    String   @default("NO")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [phone])
+
+  @@unique([userId, date])
+}
+
+model Wishlist {
+  id        Int            @id @default(autoincrement())
+  userId    String
+  date      DateTime       @db.Date
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [phone])
+  items     WishlistItem[]
+
+  @@unique([userId, date])
+}
+
+model WishlistItem {
+  id          Int       @id @default(autoincrement())
+  wishlistId  Int
+  vegetableId Int
+  quantity    String
+  wishlist    Wishlist  @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  vegetable   Vegetable @relation(fields: [vegetableId], references: [id])
+
+  @@index([wishlistId])
+  @@index([vegetableId])
+}
+
+model StandingOrder {
+  id          Int       @id @default(autoincrement())
+  userId      String
+  vegetableId Int
+  quantity    String
+  user        User      @relation(fields: [userId], references: [phone])
+  vegetable   Vegetable @relation(fields: [vegetableId], references: [id])
+  
+  @@unique([userId, vegetableId])
+  @@index([userId])
+}
+
+model DeliveryArea {
+  id             Int             @id @default(autoincrement())
+  city           String
+  state          String
+  isActive       Boolean         @default(true)
+  locationPrices LocationPrice[]
+  
+  @@unique([city, state])
+}
+
+model LocationPrice {
+  id             Int          @id @default(autoincrement())
+  marketPrice    Float
+  sabzimatePrice Float
+  
+  vegetableId    Int
+  vegetable      Vegetable    @relation(fields: [vegetableId], references: [id], onDelete: Cascade)
+  
+  areaId         Int
+  area           DeliveryArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  
+  @@unique([vegetableId, areaId])
+  @@index([areaId])
+}
+
+model Coupon {
+  id            Int          @id @default(autoincrement())
+  code          String       @unique
+  discountType  DiscountType
+  discountValue Float
+  isActive      Boolean      @default(true)
+  expiresAt     DateTime?
+  minOrderValue Float?
+  usageLimit    Int?
+  usageCount    Int          @default(0)
+  createdAt     DateTime     @default(now())
+  
+  sales         Sale[]
+}

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "outDir": "./dist",
+    "rootDirs": [
+      "./src",
+      "../common"
+    ],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node"
+  },
+  "include": [
+    "src/**/*",
+    "../common/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "src/config/passport.ts",
+    "src/routes/orders.ts"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "सब्ज़ीMATE",
+  "short_name": "सब्ज़ीMATE",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "description": "Your daily fresh vegetable partner.",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

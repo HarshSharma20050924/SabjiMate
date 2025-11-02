@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "rootDir": ".",             // <- Add this
+    "paths": {
+      "@common/*": ["packages/common/*"],
+      "@client/*": ["packages/client/*"],
+      "@driver/*": ["packages/driver/*"],
+      "@admin/*": ["packages/admin/*"]
+    }
+  },
+  "include": [
+    "index.tsx",
+    "admin.tsx",
+    "driver.tsx",
+    "packages/client/**/*.ts",
+    "packages/client/**/*.tsx",
+    "packages/admin/**/*.ts",
+    "packages/admin/**/*.tsx",
+    "packages/driver/**/*.ts",
+    "packages/driver/**/*.tsx",
+    "packages/common/**/*.ts",
+    "packages/common/**/*.tsx",
+    "vite.config.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

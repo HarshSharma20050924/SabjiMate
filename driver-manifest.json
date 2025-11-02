@@ -1,0 +1,17 @@
+{
+  "name": "सब्ज़ीMATE Driver",
+  "short_name": "Driver App",
+  "start_url": "/driver.html",
+  "display": "standalone",
+  "background_color": "#f1f5f9",
+  "theme_color": "#2563eb",
+  "description": "Driver portal for सब्ज़ीMATE.",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

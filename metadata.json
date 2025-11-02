@@ -1,0 +1,8 @@
+{
+  "name": "Testing",
+  "description": "A mobile app for a vegetable selling company to track daily prices, delivery truck location, and manage daily orders with a simple 'Yes/No' confirmation. Users can also place urgent orders and view their monthly bills.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}
