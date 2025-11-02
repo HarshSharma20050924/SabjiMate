@@ -18,9 +18,11 @@ import {
   Coupon,
   ChatMessage,
 } from './types';
+import { getApiBaseUrl } from './utils';
 
 let accessToken: string | null = null;
 let refreshToken: string | null = null;
+const baseUrl = getApiBaseUrl();
 
 // This event is used to signal the AuthContext to perform a logout
 const forceLogoutEvent = new Event('force-logout');
@@ -65,7 +67,7 @@ const apiFetch = async (url: string, options: RequestInit): Promise<Response> =>
         }
 
         try {
-            const refreshResponse = await fetch('/api/auth/refresh', {
+            const refreshResponse = await fetch(`${baseUrl}/api/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken: storedRefreshToken }),
@@ -94,7 +96,7 @@ const apiFetch = async (url: string, options: RequestInit): Promise<Response> =>
 
 // Public endpoint for client to check wishlist lock status
 export const getPublicWishlistLockStatus = async (): Promise<{ isLocked: boolean }> => {
-    const response = await fetch('/api/settings/wishlist-lock'); // Public, no auth needed
+    const response = await fetch(`${baseUrl}/api/settings/wishlist-lock`); // Public, no auth needed
     if (!response.ok) throw new Error('Failed to fetch public wishlist lock status');
     return response.json();
 }
@@ -102,7 +104,7 @@ export const getPublicWishlistLockStatus = async (): Promise<{ isLocked: boolean
 
 // --- Auth ---
 export const sendOtp = async (phone: string): Promise<void> => {
-  const response = await fetch('/api/auth/send-otp', {
+  const response = await fetch(`${baseUrl}/api/auth/send-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone }),
@@ -114,7 +116,7 @@ export const sendOtp = async (phone: string): Promise<void> => {
 };
 
 export const verifyOtp = async (phone: string, otp: string): Promise<{ accessToken: string; refreshToken: string; user: User }> => {
-  const response = await fetch('/api/auth/verify-otp', {
+  const response = await fetch(`${baseUrl}/api/auth/verify-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, otp }),
@@ -127,7 +129,7 @@ export const verifyOtp = async (phone: string, otp: string): Promise<{ accessTok
 };
 
 export const loginUser = async (phone: string, password: string): Promise<{ accessToken: string; refreshToken: string; user: User }> => {
-    const response = await fetch('/api/auth/login', {
+    const response = await fetch(`${baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, password }),
@@ -142,7 +144,7 @@ export const loginUser = async (phone: string, password: string): Promise<{ acce
 export const logoutUser = async (): Promise<void> => {
     const currentRefreshToken = refreshToken || localStorage.getItem('refreshToken');
     if (currentRefreshToken) {
-        await fetch('/api/auth/logout', {
+        await fetch(`${baseUrl}/api/auth/logout`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ refreshToken: currentRefreshToken }),
@@ -152,7 +154,7 @@ export const logoutUser = async (): Promise<void> => {
 
 // --- User ---
 export const updateUser = async (userData: User): Promise<User> => {
-  const response = await apiFetch('/api/users/me', {
+  const response = await apiFetch(`${baseUrl}/api/users/me`, {
     method: 'PUT',
     body: JSON.stringify(userData),
   });
@@ -162,7 +164,7 @@ export const updateUser = async (userData: User): Promise<User> => {
 
 // --- Vegetables ---
 export const getTodaysVegetables = async (city?: string | null): Promise<Vegetable[]> => {
-  const url = city ? `/api/vegetables?city=${encodeURIComponent(city)}` : '/api/vegetables';
+  const url = city ? `${baseUrl}/api/vegetables?city=${encodeURIComponent(city)}` : `${baseUrl}/api/vegetables`;
   const response = await apiFetch(url, { method: 'GET' });
   if (!response.ok) throw new Error('Failed to fetch vegetables');
   return response.json();
@@ -170,7 +172,7 @@ export const getTodaysVegetables = async (city?: string | null): Promise<Vegetab
 
 // --- Delivery Confirmation ---
 export const sendDeliveryConfirmation = async (choice: 'YES' | 'NO', user: User): Promise<void> => {
-  await apiFetch('/api/deliveries/confirm', {
+  await apiFetch(`${baseUrl}/api/deliveries/confirm`, {
     method: 'POST',
     body: JSON.stringify({ choice }),
   });
@@ -178,27 +180,27 @@ export const sendDeliveryConfirmation = async (choice: 'YES' | 'NO', user: User)
 
 // --- Wishlist ---
 export const submitWishlist = async (items: WishlistItem[]): Promise<void> => {
-    await apiFetch('/api/wishlist', {
+    await apiFetch(`${baseUrl}/api/wishlist`, {
         method: 'POST',
         body: JSON.stringify({ items }),
     });
 };
 
 export const getMyTodaysWishlist = async (): Promise<WishlistItem[]> => {
-    const response = await apiFetch('/api/wishlist', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/wishlist`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch wishlist');
     return response.json();
 }
 
 // --- Standing Order ---
 export const getStandingOrder = async (): Promise<StandingOrderItem[]> => {
-    const response = await apiFetch('/api/standing-order', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/standing-order`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch standing order');
     return response.json();
 };
 
 export const updateStandingOrder = async (items: StandingOrderItem[]): Promise<void> => {
-    await apiFetch('/api/standing-order', {
+    await apiFetch(`${baseUrl}/api/standing-order`, {
         method: 'POST',
         body: JSON.stringify({ items }),
     });
@@ -207,7 +209,7 @@ export const updateStandingOrder = async (items: StandingOrderItem[]): Promise<v
 
 // --- AI Services ---
 export const getRecipeOfTheDay = async (vegetableNames: string[]): Promise<Recipe> => {
-    const response = await apiFetch('/api/ai/recipe-of-the-day', {
+    const response = await apiFetch(`${baseUrl}/api/ai/recipe-of-the-day`, {
         method: 'POST',
         body: JSON.stringify({ vegetableNames }),
     });
@@ -221,7 +223,7 @@ export const getRecipeOfTheDay = async (vegetableNames: string[]): Promise<Recip
 export const processAudioOrder = async (audioBlob: Blob): Promise<ParsedOrderItem[]> => {
     const formData = new FormData();
     formData.append('audio', audioBlob);
-    const response = await apiFetch('/api/ai/process-audio-order', {
+    const response = await apiFetch(`${baseUrl}/api/ai/process-audio-order`, {
         method: 'POST',
         body: formData,
     });
@@ -230,7 +232,7 @@ export const processAudioOrder = async (audioBlob: Blob): Promise<ParsedOrderIte
 };
 
 export const reverseGeocode = async (lat: number, lon: number): Promise<{ address: string; city: string; state: string }> => {
-    const response = await apiFetch('/api/ai/reverse-geocode', {
+    const response = await apiFetch(`${baseUrl}/api/ai/reverse-geocode`, {
         method: 'POST',
         body: JSON.stringify({ lat, lon }),
     });
@@ -239,7 +241,7 @@ export const reverseGeocode = async (lat: number, lon: number): Promise<{ addres
 };
 
 export const sendChatMessage = async (history: ChatMessage[], message: string, systemInstruction: string): Promise<{ response: string }> => {
-    const response = await apiFetch('/api/ai/chat', {
+    const response = await apiFetch(`${baseUrl}/api/ai/chat`, {
         method: 'POST',
         body: JSON.stringify({ history, message, systemInstruction }),
     });
@@ -257,7 +259,7 @@ export const placeUrgentOrder = async (
     paymentMethod: 'COD' | 'ONLINE',
     couponCode?: string
 ): Promise<any> => {
-    const response = await apiFetch('/api/orders/urgent', {
+    const response = await apiFetch(`${baseUrl}/api/orders/urgent`, {
         method: 'POST',
         body: JSON.stringify({ items, total, paymentMethod, couponCode }),
     });
@@ -270,7 +272,7 @@ export const placeUrgentOrder = async (
 
 // --- Promotions ---
 export const validateCoupon = async (code: string): Promise<Coupon> => {
-  const response = await apiFetch(`/api/promotions/validate/${code}`, {
+  const response = await apiFetch(`${baseUrl}/api/promotions/validate/${code}`, {
     method: 'GET',
   });
   if (!response.ok) {
@@ -287,7 +289,7 @@ export const submitReview = async (payload: {
   rating: number;
   comment?: string;
 }): Promise<void> => {
-  const response = await apiFetch('/api/reviews', {
+  const response = await apiFetch(`${baseUrl}/api/reviews`, {
     method: 'POST',
     body: JSON.stringify(payload),
   });
@@ -300,14 +302,14 @@ export const submitReview = async (payload: {
 
 // --- Bills ---
 export const getBills = async (user: User): Promise<BillEntry[]> => {
-    const response = await apiFetch('/api/bills', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/bills`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch bills');
     return response.json();
 };
 
 // Note: This function is deprecated in favor of online/cash payments. Kept for reference.
 export const payOutstandingBills = async (userId: string): Promise<void> => {
-    const response = await apiFetch('/api/bills/pay', {
+    const response = await apiFetch(`${baseUrl}/api/bills/pay`, {
         method: 'POST',
         body: JSON.stringify({ userId }),
     });
@@ -317,7 +319,7 @@ export const payOutstandingBills = async (userId: string): Promise<void> => {
 
 // --- Payments (New) ---
 export const createPaymentOrder = async (amount: number): Promise<any> => {
-    const response = await apiFetch('/api/payments/create-order', {
+    const response = await apiFetch(`${baseUrl}/api/payments/create-order`, {
         method: 'POST',
         body: JSON.stringify({ amount }),
     });
@@ -330,7 +332,7 @@ export const verifyPayment = async (paymentData: {
     razorpay_payment_id: string;
     razorpay_signature: string;
 }, saleId?: number): Promise<{ status: string }> => {
-    const response = await apiFetch('/api/payments/verify', {
+    const response = await apiFetch(`${baseUrl}/api/payments/verify`, {
         method: 'POST',
         body: JSON.stringify(saleId ? { ...paymentData, saleId } : paymentData),
     });
@@ -341,13 +343,13 @@ export const verifyPayment = async (paymentData: {
 
 // --- Admin specific ---
 export const getWishlistLockStatusForAdmin = async (): Promise<{ isLocked: boolean }> => {
-    const response = await apiFetch('/api/admin/settings/wishlist-lock', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/settings/wishlist-lock`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch wishlist lock status');
     return response.json();
 };
 
 export const updateWishlistLockStatus = async (isLocked: boolean): Promise<{ isLocked: boolean }> => {
-    const response = await apiFetch('/api/admin/settings/wishlist-lock', {
+    const response = await apiFetch(`${baseUrl}/api/admin/settings/wishlist-lock`, {
         method: 'PUT',
         body: JSON.stringify({ isLocked }),
     });
@@ -356,13 +358,13 @@ export const updateWishlistLockStatus = async (isLocked: boolean): Promise<{ isL
 };
 
 export const getAllVegetablesForAdmin = async (): Promise<Vegetable[]> => {
-    const response = await apiFetch('/api/admin/vegetables/all', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/vegetables/all`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch all vegetables for admin');
     return response.json();
 };
 
 export const addVegetable = async (vegData: VegetableAdminPayload): Promise<Vegetable> => {
-    const response = await apiFetch('/api/vegetables', {
+    const response = await apiFetch(`${baseUrl}/api/vegetables`, {
         method: 'POST',
         body: JSON.stringify(vegData),
     });
@@ -374,7 +376,7 @@ export const addVegetable = async (vegData: VegetableAdminPayload): Promise<Vege
 };
 
 export const updateVegetable = async (vegData: VegetableAdminPayload & { id: number }): Promise<Vegetable> => {
-    const response = await apiFetch(`/api/vegetables/${vegData.id}`, {
+    const response = await apiFetch(`${baseUrl}/api/vegetables/${vegData.id}`, {
         method: 'PUT',
         body: JSON.stringify(vegData),
     });
@@ -386,7 +388,7 @@ export const updateVegetable = async (vegData: VegetableAdminPayload & { id: num
 };
 
 export const deleteVegetable = async (vegId: number): Promise<void> => {
-    const response = await apiFetch(`/api/vegetables/${vegId}`, {
+    const response = await apiFetch(`${baseUrl}/api/vegetables/${vegId}`, {
         method: 'DELETE',
     });
     if (!response.ok && response.status !== 204) {
@@ -396,49 +398,49 @@ export const deleteVegetable = async (vegId: number): Promise<void> => {
 };
 
 export const getTodaysDeliveries = async (): Promise<{ confirmed: User[]; rejected: User[] }> => {
-    const response = await apiFetch('/api/admin/deliveries/today', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/deliveries/today`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch deliveries');
     return response.json();
 };
 
 export const getTodaysWishlist = async (): Promise<AggregatedWishlistItem[]> => {
-    const response = await apiFetch('/api/admin/wishlist/today', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/wishlist/today`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch wishlist summary');
     return response.json();
 };
 
 export const getTodaysWishlistByUser = async (): Promise<UserWishlist[]> => {
-    const response = await apiFetch('/api/admin/wishlist/by-user', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/wishlist/by-user`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch user wishlist summary');
     return response.json();
 };
 
 export const getUsers = async (): Promise<User[]> => {
-    const response = await apiFetch('/api/admin/users', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/users`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch users');
     return response.json();
 };
 
 export const getSalesData = async (): Promise<Sale[]> => {
-    const response = await apiFetch('/api/admin/sales', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/sales`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch sales data');
     return response.json();
 };
 
 export const markSaleAsPaidCash = async (saleId: number): Promise<void> => {
-    await apiFetch(`/api/admin/sales/${saleId}/mark-paid-cash`, {
+    await apiFetch(`${baseUrl}/api/admin/sales/${saleId}/mark-paid-cash`, {
         method: 'POST',
     });
 };
 
 export const getDrivers = async (): Promise<User[]> => {
-    const response = await apiFetch('/api/admin/drivers', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/drivers`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch drivers');
     return response.json();
 };
 
 export const createDriver = async (driverData: Partial<User>): Promise<User> => {
-    const response = await apiFetch('/api/admin/drivers', {
+    const response = await apiFetch(`${baseUrl}/api/admin/drivers`, {
         method: 'POST',
         body: JSON.stringify(driverData),
     });
@@ -450,7 +452,7 @@ export const createDriver = async (driverData: Partial<User>): Promise<User> => 
 };
 
 export const recordSale = async (userId: string, items: any[], total: number, isUrgent = false): Promise<Sale> => {
-    const response = await apiFetch('/api/sales/record', {
+    const response = await apiFetch(`${baseUrl}/api/sales/record`, {
         method: 'POST',
         body: JSON.stringify({ userId, items, total, isUrgent }),
     });
@@ -459,20 +461,20 @@ export const recordSale = async (userId: string, items: any[], total: number, is
 };
 
 export const getUrgentOrders = async (): Promise<Sale[]> => {
-    const response = await apiFetch('/api/admin/orders/urgent/all', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/orders/urgent/all`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to get urgent orders');
     return response.json();
 };
 
 // Promotions (Admin)
 export const getPromotions = async (): Promise<Coupon[]> => {
-    const response = await apiFetch('/api/admin/promotions', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/admin/promotions`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch promotions');
     return response.json();
 };
 
 export const createPromotion = async (data: Partial<Coupon>): Promise<Coupon> => {
-    const response = await apiFetch('/api/admin/promotions', {
+    const response = await apiFetch(`${baseUrl}/api/admin/promotions`, {
         method: 'POST',
         body: JSON.stringify(data),
     });
@@ -484,7 +486,7 @@ export const createPromotion = async (data: Partial<Coupon>): Promise<Coupon> =>
 };
 
 export const updatePromotion = async (id: number, data: Partial<Coupon>): Promise<Coupon> => {
-    const response = await apiFetch(`/api/admin/promotions/${id}`, {
+    const response = await apiFetch(`${baseUrl}/api/admin/promotions/${id}`, {
         method: 'PUT',
         body: JSON.stringify(data),
     });
@@ -498,31 +500,31 @@ export const updatePromotion = async (id: number, data: Partial<Coupon>): Promis
 
 // --- Driver specific ---
 export const getDriverTodaysDeliveries = async (): Promise<{ confirmed: User[]; rejected: User[] }> => {
-    const response = await apiFetch('/api/driver/deliveries/today', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/driver/deliveries/today`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch deliveries');
     return response.json();
 };
 
 export const getDriverTodaysWishlist = async (): Promise<AggregatedWishlistItem[]> => {
-    const response = await apiFetch('/api/driver/wishlist/today', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/driver/wishlist/today`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch wishlist summary');
     return response.json();
 };
 
 export const getDriverTodaysWishlistByUser = async (): Promise<UserWishlist[]> => {
-    const response = await apiFetch('/api/driver/wishlist/by-user', { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/driver/wishlist/by-user`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch user wishlist summary');
     return response.json();
 };
 
 export const getSalesForUser = async (phone: string): Promise<Sale[]> => {
-    const response = await apiFetch(`/api/driver/users/${phone}/sales`, { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/driver/users/${phone}/sales`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch sales for user');
     return response.json();
 };
 
 export const driverMarkSaleAsPaidCash = async (saleId: number): Promise<void> => {
-    const response = await apiFetch(`/api/driver/sales/${saleId}/mark-paid-cash`, {
+    const response = await apiFetch(`${baseUrl}/api/driver/sales/${saleId}/mark-paid-cash`, {
         method: 'POST',
     });
     if (!response.ok) {
@@ -532,20 +534,20 @@ export const driverMarkSaleAsPaidCash = async (saleId: number): Promise<void> =>
 };
 
 export const getNearbyCustomers = async (lat: number, lon: number): Promise<User[]> => {
-    const response = await apiFetch(`/api/driver/nearby-customers?lat=${lat}&lon=${lon}`, { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/driver/nearby-customers?lat=${lat}&lon=${lon}`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch nearby customers');
     return response.json();
 };
 
 // --- Location & Pricing ---
 export const getDeliveryAreas = async (): Promise<DeliveryArea[]> => {
-    const response = await fetch('/api/delivery-areas'); // Public, no auth needed
+    const response = await fetch(`${baseUrl}/api/delivery-areas`); // Public, no auth needed
     if (!response.ok) throw new Error('Failed to fetch delivery areas');
     return response.json();
 };
 
 export const createDeliveryArea = async (data: { city: string, state: string }): Promise<DeliveryArea> => {
-    const response = await apiFetch('/api/admin/delivery-areas', {
+    const response = await apiFetch(`${baseUrl}/api/admin/delivery-areas`, {
         method: 'POST',
         body: JSON.stringify(data),
     });
@@ -554,7 +556,7 @@ export const createDeliveryArea = async (data: { city: string, state: string }):
 };
 
 export const updateDeliveryArea = async (area: DeliveryArea): Promise<DeliveryArea> => {
-    const response = await apiFetch(`/api/admin/delivery-areas/${area.id}`, {
+    const response = await apiFetch(`${baseUrl}/api/admin/delivery-areas/${area.id}`, {
         method: 'PUT',
         body: JSON.stringify({ isActive: area.isActive }),
     });
@@ -563,13 +565,13 @@ export const updateDeliveryArea = async (area: DeliveryArea): Promise<DeliveryAr
 };
 
 export const getLocationPrices = async (vegId: number): Promise<LocationPrice[]> => {
-    const response = await apiFetch(`/api/vegetables/${vegId}/prices`, { method: 'GET' });
+    const response = await apiFetch(`${baseUrl}/api/vegetables/${vegId}/prices`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch location prices');
     return response.json();
 };
 
 export const setLocationPrice = async (vegId: number, areaId: number, marketPrice: number, sabzimatePrice: number): Promise<LocationPrice> => {
-    const response = await apiFetch(`/api/vegetables/${vegId}/prices`, {
+    const response = await apiFetch(`${baseUrl}/api/vegetables/${vegId}/prices`, {
         method: 'POST',
         body: JSON.stringify({ areaId, marketPrice, sabzimatePrice }),
     });

@@ -1,13 +1,3 @@
-
-
-
-
-
-
-
-
-
-
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -38,7 +28,13 @@ const server = http.createServer(app);
 initializeWebSocket(server);
 
 // --- Express Middleware ---
-app.use(cors());
+app.use(cors({
+    // This allows credentialed requests (like those with auth tokens)
+    // from any origin. For enhanced security in production, you might
+    // want to restrict this to your specific Vercel domain.
+    origin: true,
+    credentials: true,
+}));
 app.use(express.json({ limit: '10mb' }));
 
 // Security Headers Middleware
