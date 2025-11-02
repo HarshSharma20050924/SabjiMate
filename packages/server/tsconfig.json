@@ -3,15 +3,19 @@
     "target": "ES2020",
     "module": "CommonJS",
     "outDir": "./dist",
-    "rootDirs": [
-      "./src",
-      "../common"
-    ],
+    "rootDirs": ["./src", "../common"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "types": ["node", "vitest"],
+    "resolveJsonModule": true,
+    "noImplicitAny": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true
   },
   "include": [
     "src/**/*",
@@ -19,6 +23,7 @@
   ],
   "exclude": [
     "node_modules",
+    "dist",
     "src/config/passport.ts",
     "src/routes/orders.ts"
   ]
