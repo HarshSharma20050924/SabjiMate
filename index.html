@@ -84,6 +84,19 @@
         0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.7); }
         50% { transform: scale(1.02); box-shadow: 0 0 0 10px rgba(234, 88, 12, 0); }
       }
+      /* Driver Portal Animations */
+      @keyframes pulse-broadcast {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+        50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+      }
+      @keyframes checkmark-draw {
+        0% { stroke-dashoffset: 25; }
+        100% { stroke-dashoffset: 0; }
+      }
+      @keyframes slide-in-bottom {
+        from { transform: translateY(100%); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
 
       .animate-zoom-in { animation: zoom-in 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
       .animate-slide-in-left { animation: slide-in-left 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.5s both; }
@@ -100,6 +113,9 @@
       .animate-slide-in-up-subtle { animation: slide-in-up-subtle 0.5s ease-out both; }
       .animate-banner-slide-in { animation: banner-slide-in 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both; }
       .animate-listening-pulse { animation: listening-pulse 1.5s infinite ease-in-out; }
+      /* Driver Portal Animation Classes */
+      .animate-pulse-broadcast { animation: pulse-broadcast 1.5s infinite; }
+      .animate-slide-in-bottom { animation: slide-in-bottom 0.5s cubic-bezier(0.25, 1, 0.5, 1) both; }
 
       .decorated-header {
         position: relative;
@@ -139,14 +155,12 @@
     "passport-google-oauth20": "https://aistudiocdn.com/passport-google-oauth20@^2.0.0",
     "express-rate-limit": "https://aistudiocdn.com/express-rate-limit@^8.1.0",
     "ioredis": "https://aistudiocdn.com/ioredis@^5.8.2",
-    "crypto": "https://aistudiocdn.com/crypto@^1.0.1",
     "@prisma/client": "https://aistudiocdn.com/@prisma/client@^6.18.0",
     "twilio": "https://aistudiocdn.com/twilio@^5.10.4",
     "http": "https://aistudiocdn.com/http@^0.0.1-security",
     "cors": "https://aistudiocdn.com/cors@^2.8.5",
     "dotenv": "https://aistudiocdn.com/dotenv@^17.2.3",
     "multer": "https://aistudiocdn.com/multer@^2.0.2",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0",
     "razorpay": "https://aistudiocdn.com/razorpay@^2.9.6",
     "ws": "https://aistudiocdn.com/ws@^8.18.3",
     "pino": "https://aistudiocdn.com/pino@^10.1.0",
@@ -157,7 +171,11 @@
     "@testing-library/user-event": "https://aistudiocdn.com/@testing-library/user-event@^14.6.1",
     "cypress": "https://aistudiocdn.com/cypress@^15.5.0",
     "zustand": "https://aistudiocdn.com/zustand@^5.0.8",
-    "idb": "https://aistudiocdn.com/idb@^8.0.3"
+    "idb": "https://aistudiocdn.com/idb@^8.0.3",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "crypto": "https://aistudiocdn.com/crypto@^1.0.1",
+    "web-push": "https://aistudiocdn.com/web-push@^3.6.7",
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0"
   }
 }
 </script>

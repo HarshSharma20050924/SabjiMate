@@ -6,7 +6,7 @@ import { addAction } from '../offline';
 
 interface SaleCreationModalProps {
   user: User;
-  wishlist: UserWishlistItemDetail[];
+  initialItems?: UserWishlistItemDetail[];
   onClose: () => void;
 }
 
@@ -17,7 +17,7 @@ interface OrderLineItem {
 
 const quantityOptions = ['100g', '250g', '500g', '1kg'];
 
-const SaleCreationModal: React.FC<SaleCreationModalProps> = ({ user, wishlist, onClose }) => {
+const SaleCreationModal: React.FC<SaleCreationModalProps> = ({ user, initialItems, onClose }) => {
   const [vegetables, setVegetables] = useState<Vegetable[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -25,18 +25,29 @@ const SaleCreationModal: React.FC<SaleCreationModalProps> = ({ user, wishlist, o
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const fetchVeggies = async () => {
+    const fetchVeggiesAndInit = async () => {
       try {
         const veggiesData = await getTodaysVegetables();
         setVegetables(veggiesData);
+        // Pre-populate with initial items (from wishlist)
+        if (initialItems && initialItems.length > 0) {
+            const prefilledItems: OrderLineItem[] = [];
+            initialItems.forEach(item => {
+                const veg = veggiesData.find(v => v.name.EN === item.vegetableName);
+                if(veg) {
+                    prefilledItems.push({ vegetable: veg, quantity: item.quantity });
+                }
+            });
+            setOrderItems(prefilledItems);
+        }
       } catch (err) {
         setError('Could not load vegetable list.');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchVeggies();
-  }, []);
+    fetchVeggiesAndInit();
+  }, [initialItems]);
   
   const handleQuantityChange = (veg: Vegetable, quantity: string) => {
       setOrderItems(prev => {
@@ -131,19 +142,6 @@ const SaleCreationModal: React.FC<SaleCreationModalProps> = ({ user, wishlist, o
         </header>
 
         <main className="p-6 flex-grow overflow-y-auto max-h-[60vh]">
-          {wishlist && wishlist.length > 0 && (
-            <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-800 p-4 mb-6 rounded-md shadow-sm">
-                <p className="font-bold flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-3.125L5 18V4z" /></svg>
-                    Customer's Wishlist for Today:
-                </p>
-                <ul className="list-disc list-inside mt-2 ml-2 space-y-1 text-sm">
-                    {wishlist.map((item, index) => (
-                        <li key={index}><span className="font-semibold">{item.vegetableName}</span> - {item.quantity}</li>
-                    ))}
-                </ul>
-            </div>
-          )}
           {isLoading ? <LoadingSpinner /> : (
             <div className="space-y-3">
               {vegetables.map(veg => (

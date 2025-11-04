@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
-import { getDriverTodaysDeliveries } from '@common/api';
-import { User } from '@common/types';
+import { getDriverTodaysDeliveries, getDriverTodaysWishlistByUser } from '@common/api';
+import { User, UserWishlist } from '@common/types';
 import LoadingSpinner from '@common/components/LoadingSpinner';
 import { AuthContext } from '@common/AuthContext';
 import { calculateDistance, getWebSocketUrl } from '@common/utils';
@@ -27,6 +27,7 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
     
     // Data State
     const [allStops, setAllStops] = useState<User[]>([]);
+    const [userWishlists, setUserWishlists] = useState<UserWishlist[]>([]);
     const [sortedStops, setSortedStops] = useState<(User & { distance: number })[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -40,7 +41,6 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
     const ws = useRef<WebSocket | null>(null);
     const watchId = useRef<number | null>(null);
 
-    // 1. Check and monitor geolocation permission status
     useEffect(() => {
         if (!navigator.permissions) {
             setError("Permissions API not supported. Please use a modern browser.");
@@ -49,14 +49,11 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
         }
         
         let permissionObj: PermissionStatus;
-        
         const checkPermission = async () => {
             try {
                 permissionObj = await navigator.permissions.query({ name: 'geolocation' });
                 setPermissionStatus(permissionObj.state as 'prompt' | 'granted' | 'denied');
-                permissionObj.onchange = () => {
-                    setPermissionStatus(permissionObj.state as 'prompt' | 'granted' | 'denied');
-                };
+                permissionObj.onchange = () => setPermissionStatus(permissionObj.state as 'prompt' | 'granted' | 'denied');
             } catch (e) {
                 setError("Could not query geolocation permission.");
                 setPermissionStatus('denied');
@@ -67,7 +64,6 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
         return () => { if (permissionObj) permissionObj.onchange = null; };
     }, []);
 
-    // 2. Function to request location
     const requestLocation = useCallback(() => {
         if (!navigator.geolocation) {
             setError("Geolocation is not supported by your browser.");
@@ -91,16 +87,19 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
     const fetchData = useCallback(async () => {
         try {
             setIsLoadingData(true);
-            const { confirmed } = await getDriverTodaysDeliveries();
+            const [{ confirmed }, wishlists] = await Promise.all([
+                getDriverTodaysDeliveries(),
+                getDriverTodaysWishlistByUser(),
+            ]);
             setAllStops(confirmed);
+            setUserWishlists(wishlists);
         } catch (err) {
-            setError("Could not load delivery stops.");
+            setError("Could not load delivery data.");
         } finally {
             setIsLoadingData(false);
         }
     }, []);
 
-    // 3. Trigger location request and data fetch based on permissions and state
     useEffect(() => {
         if (permissionStatus === 'granted' && !location && !isFetchingLocation) {
             requestLocation();
@@ -110,7 +109,6 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
         }
     }, [permissionStatus, location, isFetchingLocation, allStops.length, fetchData, requestLocation]);
     
-    // 4. Sort stops whenever location or the list of stops changes
     useEffect(() => {
         if (!location || allStops.length === 0) return;
 
@@ -137,12 +135,9 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
 
             ws.current.onopen = () => {
                 setIsBroadcasting(true);
-
-                // Send a one-time "start_broadcast" message to trigger notifications
                 if (driver?.phone) {
                     ws.current?.send(JSON.stringify({ type: 'start_broadcast', driverId: driver.phone }));
                 }
-
                 watchId.current = navigator.geolocation.watchPosition(
                     (position) => {
                         const newLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
@@ -153,7 +148,7 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
                     },
                     (geoError) => {
                         setError(`Geolocation Error: ${geoError.message}`);
-                        handleToggleBroadcast(); // Toggles it off
+                        handleToggleBroadcast();
                     },
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
                 );
@@ -163,12 +158,10 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
         }
     };
 
-    // Render loading state
     if (permissionStatus === 'loading') {
         return <div className="flex flex-col h-screen bg-gray-50 items-center justify-center"><LoadingSpinner /><p className="mt-4 text-gray-600">Checking permissions...</p></div>;
     }
     
-    // Render permission denied state
     if (permissionStatus === 'denied') {
         return (
             <div className="flex flex-col h-screen bg-gray-50">
@@ -182,7 +175,6 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             </div>);
     }
 
-    // Render permission prompt / location fetching state
     if (permissionStatus === 'prompt' || !location) {
         return (
             <div className="flex flex-col h-screen bg-gray-50">
@@ -201,7 +193,8 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             </div>);
     }
     
-    // --- Main App UI ---
+    const userWishlistForManagedUser = userWishlists.find(w => w.user.phone === managingUser?.phone)?.items || [];
+
     return (
         <div className="flex flex-col h-screen bg-gray-100">
             <DriverHeader onLogout={logout} driverName={driver?.name} isBroadcasting={isBroadcasting} onToggleBroadcast={handleToggleBroadcast} isOnline={isOnline} />
@@ -214,7 +207,7 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             
             <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-            {managingUser && <UserActionModal user={managingUser} onClose={() => { setManagingUser(null); fetchData(); }} />}
+            {managingUser && <UserActionModal user={managingUser} userWishlist={userWishlistForManagedUser} onClose={() => { setManagingUser(null); fetchData(); }} />}
         </div>
     );
 };

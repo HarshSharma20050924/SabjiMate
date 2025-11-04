@@ -29,6 +29,7 @@ export interface User {
   role?: 'USER' | 'ADMIN' | 'DRIVER' | null;
   password?: string | null; // For admin creating drivers
   paymentPreference?: PaymentPreference | null;
+  unpaidSalesCount?: number; // For driver portal UI
 }
 
 export interface Vegetable {

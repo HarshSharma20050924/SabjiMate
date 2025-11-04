@@ -1,11 +1,7 @@
-
-
-
-
-
 import { Router, Request, Response } from 'express';
 import prisma from '../db';
 import { protect, driverOrAdmin } from '../middleware/auth';
+import { User } from '../../../common/types';
 
 const router = Router();
 
@@ -34,9 +30,33 @@ router.get('/today', protect, driverOrAdmin, async (req: Request, res: Response)
     }
     const userPhones = confirmations.map(c => c.userId);
     const users = await prisma.user.findMany({ where: { phone: { in: userPhones } } });
+
+    // Efficiently get unpaid counts for all relevant users in one query
+    const salesData = await prisma.sale.groupBy({
+        by: ['userId'],
+        where: {
+            userId: { in: userPhones },
+            paymentStatus: 'UNPAID'
+        },
+        _count: {
+            id: true
+        }
+    });
+
+    const unpaidCounts = new Map(salesData.map(item => [item.userId, item._count.id]));
+
+    const augmentUser = (user: User) => ({
+        ...user,
+        unpaidSalesCount: unpaidCounts.get(user.phone) || 0
+    });
     
-    const confirmed = users.filter(u => confirmations.find(c => c.userId === u.phone)?.choice === 'YES');
-    const rejected = users.filter(u => confirmations.find(c => c.userId === u.phone)?.choice === 'NO');
+    const confirmed = users
+        .filter(u => confirmations.find(c => c.userId === u.phone)?.choice === 'YES')
+        .map(augmentUser);
+        
+    const rejected = users
+        .filter(u => confirmations.find(c => c.userId === u.phone)?.choice === 'NO')
+        .map(augmentUser);
 
     res.json({ confirmed, rejected });
 });

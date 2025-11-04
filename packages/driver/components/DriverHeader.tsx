@@ -23,11 +23,11 @@ const DriverHeader: React.FC<DriverHeaderProps> = ({ driverName, onLogout, isBro
             </div>
             <div className="flex items-center space-x-4">
                  <div className="flex flex-col items-center">
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <label className={`relative inline-flex items-center cursor-pointer p-2 rounded-full ${isBroadcasting ? 'animate-pulse-broadcast' : ''}`}>
                         <input type="checkbox" checked={isBroadcasting} onChange={onToggleBroadcast} className="sr-only peer" />
                         <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-blue-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                     </label>
-                    <span className="text-xs font-semibold text-gray-600 mt-1">Broadcast</span>
+                    <span className="text-xs font-semibold text-gray-600 -mt-1">Broadcast</span>
                 </div>
                 <button onClick={onLogout} className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg">
                     Logout

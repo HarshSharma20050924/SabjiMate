@@ -8,13 +8,22 @@ interface StopCardProps {
 }
 
 const StopCard: React.FC<StopCardProps> = ({ user, onManageUser, stopNumber }) => {
+  const hasUnpaid = (user.unpaidSalesCount ?? 0) > 0;
+
   return (
-    <div className="bg-white p-4 rounded-xl shadow-md flex items-center gap-4">
-        <div className="flex-shrink-0 w-12 h-12 bg-gray-200 text-gray-700 font-bold text-xl rounded-full flex items-center justify-center ring-2 ring-gray-300">
+    <div className="bg-white p-4 rounded-xl shadow-md flex items-center gap-4 border-l-4 border-blue-500">
+        <div className="flex-shrink-0 w-12 h-12 bg-gray-100 text-gray-700 font-bold text-xl rounded-full flex items-center justify-center ring-4 ring-gray-200">
             {stopNumber}
         </div>
         <div className="flex-grow min-w-0">
-            <p className="font-bold text-lg text-gray-800 truncate">{user.name}</p>
+            <div className="flex items-center justify-between">
+                <p className="font-bold text-lg text-gray-800 truncate">{user.name}</p>
+                {hasUnpaid && (
+                     <span className="flex-shrink-0 ml-2 text-xs font-bold bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                        Pending Payment
+                    </span>
+                )}
+            </div>
             <p className="text-sm text-gray-600 mt-1 truncate">{user.address}</p>
             <p className="text-sm font-semibold text-blue-600 mt-1">{user.distance.toFixed(2)} km away</p>
         </div>
