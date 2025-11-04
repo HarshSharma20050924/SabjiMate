@@ -1,3 +1,4 @@
+
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -15,7 +16,6 @@ import paymentRoutes from './routes/payments'; // New payment routes
 import notificationRoutes from './routes/notifications'; // Import new notification routes
 import { initializeDefaultAdmin } from './services/user';
 import { initializeWebSocket } from './websocket';
-import { fileURLToPath } from 'url';
 
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
 const envPath = path.resolve(__dirname, `../../../${envFile}`);
@@ -31,6 +31,7 @@ logger.info('--------------------------');
 
 
 const app = express();
+app.set('trust proxy', 1); // Trust the first proxy (e.g., Render's load balancer)
 const server = http.createServer(app);
 
 // Initialize the WebSocket server and attach it to the HTTP server.
