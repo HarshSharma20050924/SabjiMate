@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Language, User, PaymentPreference } from '../../../common/types';
 import { translations } from '../../../common/constants';
 import { AuthContext } from '../../../common/AuthContext';
@@ -15,7 +15,8 @@ const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-
 const PolicyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 const EssentialsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>;
 const HistoryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const InstallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
+const InstallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
+const NotificationsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>;
 
 
 interface SettingsScreenProps {
@@ -44,11 +45,83 @@ const SettingsItem: React.FC<{icon: React.ReactNode, label: string, onClick?: ()
     </div>
 );
 
+// Helper function to convert urlBase64 to Uint8Array
+function urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, onClose, onNavigateToProfile, onNavigateToStandingOrder, onNavigateToHistory, isInstallable, onInstallApp }) => {
     const t = translations[language];
     const auth = useContext(AuthContext);
     const [user, setUser] = useState<User>(auth.user!);
     const [isSaving, setIsSaving] = useState(false);
+
+    // --- Notification State ---
+    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+    const [isNotificationLoading, setIsNotificationLoading] = useState(true);
+
+    useEffect(() => {
+        // Check initial notification status
+        if ('Notification' in window && 'serviceWorker' in navigator) {
+            setIsNotificationsEnabled(Notification.permission === 'granted');
+        }
+        setIsNotificationLoading(false);
+    }, []);
+
+    const handleNotificationsToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const shouldEnable = e.target.checked;
+        setIsNotificationLoading(true);
+
+        if (Notification.permission === 'denied') {
+            alert("You have blocked notifications. Please enable them in your browser settings.");
+            setIsNotificationLoading(false);
+            return;
+        }
+
+        const registration = await navigator.serviceWorker.ready;
+
+        if (shouldEnable) {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    throw new Error('Permission not granted');
+                }
+                const vapidPublicKey = await api.getVapidPublicKey();
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                });
+                await api.subscribeToPushNotifications(subscription);
+                setIsNotificationsEnabled(true);
+            } catch (error) {
+                console.error('Failed to subscribe to notifications', error);
+                alert("Could not enable notifications. This may be due to a server configuration issue. Please contact support if the problem persists.");
+                setIsNotificationsEnabled(false);
+            }
+        } else {
+            try {
+                const subscription = await registration.pushManager.getSubscription();
+                if (subscription) {
+                    await api.unsubscribeFromPushNotifications(subscription);
+                    await subscription.unsubscribe();
+                }
+                setIsNotificationsEnabled(false);
+            } catch (error) {
+                console.error('Failed to unsubscribe from notifications', error);
+                // Keep UI optimistic
+                setIsNotificationsEnabled(true);
+            }
+        }
+        setIsNotificationLoading(false);
+    };
 
     const handlePreferenceChange = async (preference: PaymentPreference) => {
         if (isSaving) return;
@@ -116,6 +189,12 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                        <div className="divide-y divide-gray-200">
                             <SettingsItem icon={<EssentialsIcon />} label={t.myDailyEssentials} onClick={onNavigateToStandingOrder} />
+                             <SettingsItem icon={<NotificationsIcon />} label={t.notifications}>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" checked={isNotificationsEnabled} onChange={handleNotificationsToggle} disabled={isNotificationLoading} className="sr-only peer" />
+                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-green-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                                </label>
+                            </SettingsItem>
                             <SettingsItem icon={<LanguageIcon />} label={t.language}>
                                 <div className="flex items-center space-x-1 bg-gray-200 rounded-full p-1 text-sm">
                                     <button onClick={() => setLanguage(Language.EN)} className={`px-3 py-1 rounded-full font-semibold transition-colors ${language === Language.EN ? 'bg-white shadow' : 'text-gray-600'}`}>

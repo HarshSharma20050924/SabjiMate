@@ -101,6 +101,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  // --- Handle Notification Click Action ---
+  useEffect(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('action') === 'track') {
+          setShowLiveTracker(true);
+          // Clean the URL so the tracking screen doesn't open again on refresh
+          window.history.replaceState({}, document.title, window.location.pathname);
+      }
+  }, []);
+
   const handleInstallClick = () => {
     if (!installPrompt) return;
     installPrompt.prompt();

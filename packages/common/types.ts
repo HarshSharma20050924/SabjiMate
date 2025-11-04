@@ -192,3 +192,26 @@ export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
 }
+
+// New type for Admin Analytics
+export interface AdminAnalyticsSummary {
+    totalRevenue: number;
+    totalUsers: number;
+    totalOrders: number;
+    historicalRevenue: { date: string, revenue: number }[];
+    topVegetables: { name: string, count: number }[];
+    // AI Enhanced Fields
+    salesForecast: { date: string, revenue: number }[];
+    smartInsights: {
+        type: 'overstock' | 'lapsing_customer';
+        title: string;
+        description: string;
+        action: string;
+        data: any; // e.g., { vegetableName: 'Tomato' } or { userName: 'John Doe', phone: '123' }
+    }[];
+    topCustomers: {
+        name: string;
+        phone: string;
+        totalSpent: number;
+    }[];
+}

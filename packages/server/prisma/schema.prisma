@@ -57,6 +57,7 @@ model User {
   wishlists             Wishlist[]
   standingOrders        StandingOrder[]
   reviews               Review[]
+  pushSubscriptions PushSubscription[]
 
   @@index([role])
 }
@@ -228,4 +229,14 @@ model Coupon {
   createdAt     DateTime     @default(now())
   
   sales         Sale[]
+}
+
+model PushSubscription {
+  endpoint String   @id
+  keys     Json
+  userId   String
+  user     User     @relation(fields: [userId], references: [phone], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

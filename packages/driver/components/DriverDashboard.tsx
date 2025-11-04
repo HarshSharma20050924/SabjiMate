@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
-import { getDriverTodaysDeliveries, getDriverTodaysWishlistByUser } from '@common/api';
-import { User, UserWishlist } from '@common/types';
+import { getDriverTodaysDeliveries } from '@common/api';
+import { User } from '@common/types';
 import LoadingSpinner from '@common/components/LoadingSpinner';
 import { AuthContext } from '@common/AuthContext';
 import { calculateDistance, getWebSocketUrl } from '@common/utils';
@@ -27,7 +27,6 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
     
     // Data State
     const [allStops, setAllStops] = useState<User[]>([]);
-    const [userWishlists, setUserWishlists] = useState<UserWishlist[]>([]);
     const [sortedStops, setSortedStops] = useState<(User & { distance: number })[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -54,9 +53,7 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
         const checkPermission = async () => {
             try {
                 permissionObj = await navigator.permissions.query({ name: 'geolocation' });
-                const initialStatus = permissionObj.state === 'granted' ? 'granted' : 'prompt';
-                setPermissionStatus(initialStatus);
-
+                setPermissionStatus(permissionObj.state as 'prompt' | 'granted' | 'denied');
                 permissionObj.onchange = () => {
                     setPermissionStatus(permissionObj.state as 'prompt' | 'granted' | 'denied');
                 };
@@ -86,7 +83,6 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             (err) => {
                 setError(`Could not get location: ${err.message}`);
                 setIsFetchingLocation(false);
-                setPermissionStatus('denied');
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
@@ -95,12 +91,8 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
     const fetchData = useCallback(async () => {
         try {
             setIsLoadingData(true);
-            const [{ confirmed }, wishlistsData] = await Promise.all([
-                getDriverTodaysDeliveries(),
-                getDriverTodaysWishlistByUser()
-            ]);
+            const { confirmed } = await getDriverTodaysDeliveries();
             setAllStops(confirmed);
-            setUserWishlists(wishlistsData);
         } catch (err) {
             setError("Could not load delivery stops.");
         } finally {
@@ -145,6 +137,12 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
 
             ws.current.onopen = () => {
                 setIsBroadcasting(true);
+
+                // Send a one-time "start_broadcast" message to trigger notifications
+                if (driver?.phone) {
+                    ws.current?.send(JSON.stringify({ type: 'start_broadcast', driverId: driver.phone }));
+                }
+
                 watchId.current = navigator.geolocation.watchPosition(
                     (position) => {
                         const newLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
@@ -164,54 +162,45 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             ws.current.onclose = () => { if (isBroadcasting) handleToggleBroadcast(); };
         }
     };
-    
-    // --- Unified Loading / Permission Screen ---
-    const StartupScreen: React.FC<{ status: PermissionStatusState, isFetching: boolean, errorMsg: string | null, onRequest: () => void }> = ({ status, isFetching, errorMsg, onRequest }) => {
-        let title = "Checking Permissions...";
-        let message = "Please wait while we check your device's location settings.";
-        let showButton = false;
 
-        if (status === 'prompt') {
-            title = "Location Access Required";
-            message = "We need your location to build your delivery route. Please grant permission when prompted.";
-            showButton = true;
-        } else if (status === 'denied') {
-            title = "Location Access Denied";
-            message = "Please enable location permissions in your browser or system settings to use the driver app.";
-        } else if (isFetching) {
-            title = "Getting Your Location...";
-            message = "This may take a moment. Please ensure you have a clear view of the sky.";
-        }
-
-        return (
-             <div className="flex flex-col h-screen bg-gray-50">
-                <DriverHeader onLogout={logout} isBroadcasting={false} onToggleBroadcast={() => {}} isOnline={isOnline} />
-                <main className="flex-grow flex items-center justify-center p-6 text-center">
-                    {isFetching || status === 'loading' ? (
-                        <div className="flex flex-col items-center">
-                            <LoadingSpinner />
-                            <p className="mt-4 text-lg font-semibold text-gray-700">{title}</p>
-                            <p className="mt-1 text-gray-500">{message}</p>
-                        </div>
-                    ) : (
-                        <div className="bg-white p-8 rounded-lg shadow-md max-w-md">
-                            <h2 className="text-2xl font-bold text-gray-800 mt-4">{title}</h2>
-                            <p className="text-gray-600 mt-2 mb-6">{message}</p>
-                            {showButton && <button onClick={onRequest} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700">Grant Permission</button>}
-                            {errorMsg && <p className="text-red-500 mt-4 text-sm">{errorMsg}</p>}
-                        </div>
-                    )}
-                </main>
-            </div>
-        );
-    };
-
-    if (permissionStatus !== 'granted' || !location) {
-        return <StartupScreen status={permissionStatus} isFetching={isFetchingLocation} errorMsg={error} onRequest={requestLocation} />;
+    // Render loading state
+    if (permissionStatus === 'loading') {
+        return <div className="flex flex-col h-screen bg-gray-50 items-center justify-center"><LoadingSpinner /><p className="mt-4 text-gray-600">Checking permissions...</p></div>;
     }
     
-    const userWishlist = userWishlists.find(w => w.user.phone === managingUser?.phone);
+    // Render permission denied state
+    if (permissionStatus === 'denied') {
+        return (
+            <div className="flex flex-col h-screen bg-gray-50">
+                <DriverHeader onLogout={logout} isBroadcasting={false} onToggleBroadcast={() => {}} isOnline={isOnline} />
+                <main className="flex-grow flex items-center justify-center p-6 text-center">
+                    <div className="bg-white p-8 rounded-lg shadow-md max-w-md">
+                        <h2 className="text-2xl font-bold text-gray-800 mt-4">Location Access Denied</h2>
+                        <p className="text-gray-600 mt-2">Please enable location permissions in your browser settings to use the driver app.</p>
+                    </div>
+                </main>
+            </div>);
+    }
 
+    // Render permission prompt / location fetching state
+    if (permissionStatus === 'prompt' || !location) {
+        return (
+            <div className="flex flex-col h-screen bg-gray-50">
+                <DriverHeader onLogout={logout} isBroadcasting={false} onToggleBroadcast={() => {}} isOnline={isOnline} />
+                <main className="flex-grow flex items-center justify-center p-6 text-center">
+                    {isFetchingLocation 
+                        ? <div className="flex flex-col items-center"><LoadingSpinner /><p className="mt-4">Getting your location...</p></div> 
+                        : <div className="bg-white p-8 rounded-lg shadow-md max-w-md">
+                            <h2 className="text-2xl font-bold mt-4">Start Your Day</h2>
+                            <p className="mt-2 mb-6">We need your location to build your delivery route.</p>
+                            <button onClick={requestLocation} className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-blue-700">Get My Location</button>
+                            {error && <p className="text-red-500 mt-4 text-sm">{error}</p>}
+                          </div>
+                    }
+                </main>
+            </div>);
+    }
+    
     // --- Main App UI ---
     return (
         <div className="flex flex-col h-screen bg-gray-100">
@@ -225,7 +214,7 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             
             <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-            {managingUser && <UserActionModal user={managingUser} wishlist={userWishlist?.items || []} onClose={() => { setManagingUser(null); fetchData(); }} />}
+            {managingUser && <UserActionModal user={managingUser} onClose={() => { setManagingUser(null); fetchData(); }} />}
         </div>
     );
 };

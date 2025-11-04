@@ -17,6 +17,7 @@ import {
   UserWishlist,
   Coupon,
   ChatMessage,
+  AdminAnalyticsSummary,
 } from './types';
 import { getApiBaseUrl } from './utils';
 
@@ -93,6 +94,31 @@ const apiFetch = async (url: string, options: RequestInit): Promise<Response> =>
 
     return response;
 };
+
+// --- Notifications ---
+export const getVapidPublicKey = async (): Promise<string> => {
+    const response = await fetch(`${baseUrl}/api/notifications/vapidPublicKey`, { method: 'GET', headers: getHeaders() });
+    if (!response.ok) throw new Error('Failed to fetch VAPID key');
+    const data = await response.json();
+    return data.publicKey;
+};
+
+export const subscribeToPushNotifications = async (subscription: PushSubscription): Promise<void> => {
+    const response = await apiFetch(`${baseUrl}/api/notifications/subscribe`, {
+        method: 'POST',
+        body: JSON.stringify(subscription),
+    });
+    if (!response.ok) throw new Error('Failed to subscribe to notifications');
+};
+
+export const unsubscribeFromPushNotifications = async (subscription: PushSubscription): Promise<void> => {
+    const response = await apiFetch(`${baseUrl}/api/notifications/unsubscribe`, {
+        method: 'POST',
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+    });
+    if (!response.ok) throw new Error('Failed to unsubscribe');
+};
+
 
 // Public endpoint for client to check wishlist lock status
 export const getPublicWishlistLockStatus = async (): Promise<{ isLocked: boolean }> => {
@@ -342,6 +368,12 @@ export const verifyPayment = async (paymentData: {
 
 
 // --- Admin specific ---
+export const getAdminAnalyticsSummary = async (startDate: string, endDate: string): Promise<AdminAnalyticsSummary> => {
+    const response = await apiFetch(`${baseUrl}/api/admin/analytics/summary?startDate=${startDate}&endDate=${endDate}`, { method: 'GET' });
+    if (!response.ok) throw new Error('Failed to fetch analytics summary');
+    return response.json();
+};
+
 export const getWishlistLockStatusForAdmin = async (): Promise<{ isLocked: boolean }> => {
     const response = await apiFetch(`${baseUrl}/api/admin/settings/wishlist-lock`, { method: 'GET' });
     if (!response.ok) throw new Error('Failed to fetch wishlist lock status');
@@ -493,6 +525,18 @@ export const updatePromotion = async (id: number, data: Partial<Coupon>): Promis
     if (!response.ok) {
         const err = await response.json();
         throw new Error(err.error || 'Failed to update promotion');
+    }
+    return response.json();
+};
+
+export const broadcastNotification = async (title: string, body: string): Promise<{ success: boolean; count: number }> => {
+    const response = await apiFetch(`${baseUrl}/api/admin/notifications/broadcast`, {
+        method: 'POST',
+        body: JSON.stringify({ title, body }),
+    });
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.error || 'Failed to send broadcast');
     }
     return response.json();
 };

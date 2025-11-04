@@ -80,3 +80,55 @@ self.addEventListener('activate', event => {
     )).then(() => self.clients.claim()) // Take control of all open clients immediately
   );
 });
+
+// --- PUSH NOTIFICATION LOGIC ---
+
+self.addEventListener('push', event => {
+  console.log('[Service Worker] Push Received.');
+  let data;
+  try {
+    data = event.data.json();
+  } catch (e) {
+    data = { title: 'SabziMATE', body: 'You have a new update!' };
+  }
+
+  const { title, body, icon, data: notificationData } = data;
+
+  const options = {
+    body: body,
+    icon: icon || '/logo.svg',
+    badge: '/logo.svg',
+    vibrate: [200, 100, 200],
+    data: notificationData || { url: '/' }, // Default to opening the app's root
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+self.addEventListener('notificationclick', event => {
+  console.log('[Service Worker] Notification click Received.');
+  event.notification.close();
+
+  const urlToOpen = new URL(event.notification.data.url, self.location.origin).href;
+
+  event.waitUntil(
+    clients.matchAll({
+      type: "window",
+      includeUncontrolled: true,
+    }).then(clientList => {
+      // If a window for the app is already open, focus it.
+      for (let i = 0; i < clientList.length; i++) {
+        let client = clientList[i];
+        if (client.url === urlToOpen && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise, open a new window.
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

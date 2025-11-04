@@ -10,7 +10,7 @@ import prisma from '../db';
 // @ts-ignore: This will be resolved by running `npx prisma generate`
 import { User as PrismaUser } from '@prisma/client';
 import logger from '../logger';
-import twilio from 'twilio';
+import { sendOTP } from '../services/otp';
 
 const router = Router();
 
@@ -27,7 +27,6 @@ const OTP_EXPIRATION_SECONDS = 300; // 5 minutes
 
 // --- Stores & Clients ---
 const redisClient = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
-const twilioClient = process.env.TWILIO_ACCOUNT_SID ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN) : null;
 
 // --- Helper Functions ---
 const generateTokens = (user: PrismaUser) => {
@@ -121,29 +120,19 @@ router.post('/send-otp', otpLimiter, async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number.' });
     }
 
+    // The magic number gets a fixed OTP for testing purposes
     const otp = (phone === '9876543210') ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
     
     // Store OTP in Redis with an expiration
     await redisClient.set(`otp:${phone}`, otp, 'EX', OTP_EXPIRATION_SECONDS);
     
-    if (process.env.NODE_ENV === 'production' && phone !== '9876543210' && twilioClient) {
-        try {
-            // FIX: Move URL parsing inside the try block to catch potential errors
-            const appDomain = new URL(APP_URL).hostname;
-            await twilioClient.messages.create({
-                body: `Your SabziMATE verification code is: ${otp}\n@${appDomain} #${otp}`,
-                from: process.env.TWILIO_PHONE_NUMBER,
-                to: `+91${phone}`
-            });
-            logger.info({ phone }, `Successfully sent OTP via Twilio.`);
-        } catch (error) {
-            logger.error(error, `Failed to send SMS OTP to phone: ${phone}`);
-            return res.status(500).json({ error: 'Failed to send OTP. Please try again later.' });
-        }
-    } else {
-        logger.info(`--- OTP for ${phone} is: ${otp} (NODE_ENV=${process.env.NODE_ENV}) ---`);
+    try {
+        await sendOTP(phone, otp);
+        res.json({ message: 'OTP sent successfully.' });
+    } catch (error: any) {
+        // The service now throws a user-friendly error
+        res.status(500).json({ error: error.message });
     }
-    res.json({ message: 'OTP sent successfully.' });
 });
 
 

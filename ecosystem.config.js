@@ -7,7 +7,7 @@ module.exports = {
   apps: [
     {
       name: 'sabzimate-server',
-      script: './packages/server/dist/index.js',
+      script: './packages/server/dist/server/src/index.js',
       instances: 'max', // Use all available CPU cores
       exec_mode: 'cluster',
       env_production: {

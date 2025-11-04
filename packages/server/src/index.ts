@@ -12,6 +12,7 @@ import driverRoutes from './routes/driver';
 import vegetableRoutes from './routes/vegetables';
 import deliveryRoutes from './routes/deliveries';
 import paymentRoutes from './routes/payments'; // New payment routes
+import notificationRoutes from './routes/notifications'; // Import new notification routes
 import { initializeDefaultAdmin } from './services/user';
 import { initializeWebSocket } from './websocket';
 import { fileURLToPath } from 'url';
@@ -19,6 +20,14 @@ import { fileURLToPath } from 'url';
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
 const envPath = path.resolve(__dirname, `../../../${envFile}`);
 dotenv.config({ path: envPath });
+
+
+// --- Startup Environment Logging ---
+logger.info('--- SERVER ENVIRONMENT ---');
+logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
+logger.info(`FORCE_DEV_OTP: ${process.env.FORCE_DEV_OTP}`);
+logger.info(`Loaded .env from: ${envPath}`);
+logger.info('--------------------------');
 
 
 const app = express();
@@ -72,6 +81,7 @@ app.use('/api/driver', driverRoutes);
 app.use('/api/vegetables', vegetableRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/notifications', notificationRoutes); // Mount notification routes
 app.use('/api', appRoutes);
 
 // --- Serve Static Frontend Files ---

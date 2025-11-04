@@ -7,12 +7,171 @@ import { Prisma as PrismaTypes, PaymentStatus } from '@prisma/client';
 import logger from '../logger';
 import { UserWishlist } from '../../../common/types';
 import IORedis from 'ioredis';
+import { sendNotification } from '../services/notifications';
+import { GoogleGenAI, Type } from '@google/genai';
 
 const router = Router();
 const redisClient = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 
 // All routes in this file are protected and require admin role
 router.use(protect, admin);
+
+// --- Analytics ---
+router.get('/analytics/summary', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    if (!startDate || !endDate || typeof startDate !== 'string' || typeof endDate !== 'string') {
+        return res.status(400).json({ error: 'startDate and endDate query parameters are required.' });
+    }
+
+    try {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        const totalRevenueResult = await prisma.sale.aggregate({
+            _sum: { total: true },
+            where: { date: { gte: start, lte: end }, paymentStatus: { not: 'UNPAID' } },
+        });
+
+        const [totalUsers, totalOrders, historicalRevenueRaw, topVegetablesRaw, topCustomersRaw] = await Promise.all([
+            prisma.user.count({ where: { role: 'USER', createdAt: { lte: end } } }),
+            prisma.sale.count({ where: { date: { gte: start, lte: end } } }),
+            prisma.sale.groupBy({
+                by: ['date'],
+                where: { date: { gte: start, lte: end }, paymentStatus: { not: 'UNPAID' } },
+                _sum: { total: true },
+                orderBy: { date: 'asc' },
+            }),
+            prisma.saleItem.groupBy({
+                by: ['vegetableName'],
+                _count: { vegetableName: true },
+                where: { sale: { date: { gte: start, lte: end } } },
+                orderBy: { _count: { vegetableName: 'desc' } },
+                take: 5,
+            }),
+            prisma.sale.groupBy({
+                by: ['userId'],
+                _sum: { total: true },
+                where: { date: { gte: start, lte: end }, paymentStatus: { not: 'UNPAID' } },
+                orderBy: { _sum: { total: 'desc' } },
+                take: 5,
+            })
+        ]);
+        
+        const userPhones = topCustomersRaw.map(c => c.userId);
+        const topCustomerUsers = await prisma.user.findMany({ where: { phone: { in: userPhones } } });
+
+        const historicalRevenue = historicalRevenueRaw.map(d => ({ date: d.date.toISOString().split('T')[0], revenue: d._sum.total || 0, }));
+        const topVegetables = topVegetablesRaw.map(v => ({ name: v.vegetableName, count: v._count.vegetableName, }));
+        const topCustomers = topCustomersRaw.map(c => {
+            const user = topCustomerUsers.find(u => u.phone === c.userId);
+            return { name: user?.name || c.userId, phone: c.userId, totalSpent: c._sum.total || 0 };
+        });
+
+        // --- AI-Powered Insights ---
+let salesForecast: { date: string; revenue: number }[] = [];
+let smartInsights: any[] = [];
+
+if (process.env.API_KEY) {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+        const historicalDataString = historicalRevenue
+            .map(d => `${d.date}: ${d.revenue.toFixed(2)}`)
+            .join('\n');
+
+        const prompt = `Based on the following daily sales data for a vegetable delivery business:\n${historicalDataString}\n\nAnalyze this data and provide a JSON object with two keys: "salesForecast" and "smartInsights".\n1. "salesForecast": Provide a realistic sales revenue forecast for the next 7 days. It should be an array of 7 objects, each with a "date" (in 'YYYY-MM-DD' format, starting from tomorrow) and a predicted "revenue" (as a number).\n2. "smartInsights": Provide up to 2 actionable insights. It should be an array of objects. For each insight, provide "type" ('overstock' or 'lapsing_customer'), "title", "description", a suggested "action", and a "data" object with relevant details like a vegetable name or customer info. For example, identify a vegetable that has low sales count from the top vegetables data provided: ${JSON.stringify(topVegetables)}.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        salesForecast: {
+                            type: Type.ARRAY,
+                            items: { type: Type.OBJECT, properties: { date: { type: Type.STRING }, revenue: { type: Type.NUMBER } } }
+                        },
+                        smartInsights: {
+                            type: Type.ARRAY,
+                            items: { type: Type.OBJECT, properties: { type: { type: Type.STRING }, title: { type: Type.STRING }, description: { type: Type.STRING }, action: { type: Type.STRING }, data: { type: Type.OBJECT } } }
+                        }
+                    }
+                }
+            }
+        });
+
+        if (!response.text) {
+            logger.warn("Gemini API returned empty text for analytics summary.");
+        } else {
+            try {
+                const aiResult = JSON.parse(response.text.trim());
+                salesForecast = aiResult.salesForecast || [];
+                smartInsights = aiResult.smartInsights || [];
+            } catch (parseError) {
+                logger.error(parseError, "Failed to parse Gemini API JSON response.");
+            }
+        }
+
+    } catch (aiError) {
+        logger.error(aiError, "Gemini API call failed for analytics summary.");
+        // Fails gracefully, the API call error won't break the response
+    }
+}
+
+        
+        res.json({
+            totalRevenue: totalRevenueResult._sum.total || 0,
+            totalUsers,
+            totalOrders,
+            historicalRevenue,
+            topVegetables,
+            topCustomers,
+            salesForecast,
+            smartInsights,
+        });
+
+    } catch (error) {
+        logger.error(error, "Failed to fetch analytics summary.");
+        res.status(500).json({ error: 'Could not load analytics summary.' });
+    }
+});
+
+
+// --- Notifications ---
+router.post('/notifications/broadcast', async (req, res) => {
+    const { title, body } = req.body;
+    if (!title || !body) {
+        return res.status(400).json({ error: 'Title and body are required for broadcast.' });
+    }
+
+    try {
+        const subscriptions = await prisma.pushSubscription.findMany();
+        if (subscriptions.length === 0) {
+            return res.json({ success: true, count: 0, message: 'No subscribers to notify.' });
+        }
+
+        const payload = {
+            title,
+            body,
+            icon: '/logo.svg',
+            data: { url: '/' } // Open the app's root on click
+        };
+
+        logger.info(`Sending broadcast to ${subscriptions.length} subscribers.`);
+
+        // Send all notifications concurrently
+        await Promise.all(subscriptions.map(sub => sendNotification(sub, payload)));
+
+        res.json({ success: true, count: subscriptions.length });
+
+    } catch (error) {
+        logger.error(error, "Failed to send broadcast notifications.");
+        res.status(500).json({ error: 'An error occurred while sending the broadcast.' });
+    }
+});
+
 
 // --- Wishlist Lock Setting ---
 router.get('/settings/wishlist-lock', async (req, res) => {
