@@ -46,7 +46,7 @@ export const getWebSocketUrl = (): string => {
     }
     
     // In production, connect to the dedicated Render.com backend WebSocket
-    return 'wss://sabzimate-server.onrender.com/socket';
+    return 'wss://sabjimate.onrender.com/socket';
 };
 
 // Provides the base URL for API calls, handling local dev proxy and production environments.
@@ -57,5 +57,5 @@ export const getApiBaseUrl = (): string => {
         return '';
     }
     // In production, we point directly to the Render backend.
-    return 'https://sabzimate-server.onrender.com';
+    return 'https://sabjimate.onrender.com';
 };
