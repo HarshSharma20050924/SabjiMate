@@ -10,7 +10,7 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://sabzimate-server.onrender.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://sabjimate.onrender.com/api/:path*" },
     { "source": "/admin/:path*", "destination": "/admin.html" },
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/driver/:path*", "destination": "/driver.html" },
