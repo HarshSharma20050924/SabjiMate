@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { User, Sale, PaymentStatus, UserWishlistItemDetail } from '@common/types';
 import { getSalesForUser, driverMarkSaleAsPaidCash } from '@common/api';
 import LoadingSpinner from '@common/components/LoadingSpinner';
-import SaleCreationModal from './SaleCreationModal';
 import { addAction } from '../offline';
+
+const SaleCreationModal = lazy(() => import('./SaleCreationModal'));
 
 const getStatusStyles = (status: PaymentStatus) => {
     switch(status) {
@@ -94,10 +95,14 @@ const UserActionModal: React.FC<{ user: User; userWishlist: UserWishlistItemDeta
   const totalDue = unpaidSales.reduce((acc, sale) => acc + sale.total, 0);
 
   if (isCreatingSale) {
-    return <SaleCreationModal user={user} initialItems={userWishlist} onClose={() => {
-      setIsCreatingSale(false);
-      fetchUserSales();
-    }} />;
+    return (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><LoadingSpinner /></div>}>
+            <SaleCreationModal user={user} initialItems={userWishlist} onClose={() => {
+              setIsCreatingSale(false);
+              fetchUserSales();
+            }} />
+        </Suspense>
+    );
   }
 
   return (

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Vegetable, Language } from '@common/types';
 import { getAllVegetablesForAdmin, deleteVegetable } from '@common/api';
 import LoadingSpinner from '@common/components/LoadingSpinner';
-import VegetableEditModal from './VegetableEditModal';
+
+const VegetableEditModal = lazy(() => import('./VegetableEditModal'));
 
 const RefreshIcon: React.FC<{className: string}> = ({className}) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
@@ -102,11 +103,13 @@ const ManageVegetables: React.FC = () => {
             </div>
         )}
         {isModalOpen && (
-            <VegetableEditModal
-                vegetable={editingVegetable}
-                onClose={() => setIsModalOpen(false)}
-                onSave={handleModalSave}
-            />
+            <Suspense fallback={<div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><LoadingSpinner /></div>}>
+                <VegetableEditModal
+                    vegetable={editingVegetable}
+                    onClose={() => setIsModalOpen(false)}
+                    onSave={handleModalSave}
+                />
+            </Suspense>
         )}
     </div>
   );

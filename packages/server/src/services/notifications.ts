@@ -1,3 +1,4 @@
+
 import webpush from 'web-push';
 import logger from '../logger';
 import prisma from '../db';
@@ -6,26 +7,29 @@ import { PushSubscription } from '@prisma/client';
 
 let isConfigured = false;
 
-export function configurePush() {
+const configurePush = () => {
     if (isConfigured) return;
 
     const publicKey = process.env.VAPID_PUBLIC_KEY;
     const privateKey = process.env.VAPID_PRIVATE_KEY;
 
     if (!publicKey || !privateKey) {
-        logger.warn('VAPID keys are not configured. Push notifications will be disabled.');
+        logger.warn('⚠️ VAPID keys are not configured in .env. Push notifications will NOT work.');
         return;
     }
 
-    webpush.setVapidDetails(
-        'mailto:support@sabzimate.com',
-        publicKey,
-        privateKey
-    );
-
-    isConfigured = true;
-    logger.info('web-push service configured successfully.');
-}
+    try {
+        webpush.setVapidDetails(
+            'mailto:support@sabzimate.com',
+            publicKey,
+            privateKey
+        );
+        isConfigured = true;
+        logger.info('✅ web-push service configured successfully with VAPID keys.');
+    } catch (e) {
+        logger.error(e, '❌ Failed to configure web-push. Check VAPID keys format.');
+    }
+};
 
 interface NotificationPayload {
     title: string;
@@ -34,10 +38,10 @@ interface NotificationPayload {
     data?: any;
 }
 
-export async function sendNotification(subscription: PushSubscription, payload: NotificationPayload) {
+const sendNotification = async (subscription: PushSubscription, payload: NotificationPayload): Promise<boolean> => {
     if (!isConfigured) {
         logger.warn('Attempted to send notification, but web-push is not configured.');
-        return;
+        return false;
     }
 
     try {
@@ -48,6 +52,7 @@ export async function sendNotification(subscription: PushSubscription, payload: 
             },
             JSON.stringify(payload)
         );
+        return true;
     } catch (error: any) {
         logger.error(error, `Failed to send notification to endpoint: ${subscription.endpoint}`);
         
@@ -58,5 +63,12 @@ export async function sendNotification(subscription: PushSubscription, payload: 
                 logger.error(e, 'Failed to delete expired subscription from DB.');
             });
         }
+        return false;
     }
-}
+};
+
+export {
+    configurePush,
+    sendNotification,
+    NotificationPayload,
+};

@@ -13,11 +13,13 @@ const initialFormState: VegetableAdminPayload = {
   sabzimatePrice: 0,
   marketPrice: 0,
   unit: { [Language.EN]: 'kg', [Language.HI]: 'किलो' },
-  image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=1740&auto=format=fit=crop', // Default placeholder
+  image: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?q=80&w=1740&auto=format&fit=crop', // Default placeholder
   isAvailable: true,
   offerTag: '',
   description: '',
   category: 'OTHER',
+  images: [],
+  videoUrl: '',
 };
 
 const fileToBase64 = (file: File): Promise<string> => {
@@ -50,6 +52,8 @@ const VegetableEditModal: React.FC<VegetableEditModalProps> = ({ vegetable, onCl
           offerTag: vegetable.offerTag || '',
           description: vegetable.description || '',
           category: vegetable.category || 'OTHER',
+          images: vegetable.images || [],
+          videoUrl: vegetable.videoUrl || '',
       });
       setImagePreview(vegetable.image);
     } else {
@@ -107,6 +111,8 @@ const VegetableEditModal: React.FC<VegetableEditModalProps> = ({ vegetable, onCl
     } else if (name.startsWith('unit.')) {
         const lang = name.split('.')[1] as Language;
         setFormData(prev => ({...prev, unit: {...prev.unit, [lang]: value}}));
+    } else if (name === 'images') {
+        setFormData(prev => ({ ...prev, images: value.split('\n').filter(url => url.trim() !== '') }));
     } else {
         setFormData(prev => ({ ...prev, [name]: isCheckbox ? checked : value }));
     }
@@ -157,7 +163,7 @@ const VegetableEditModal: React.FC<VegetableEditModalProps> = ({ vegetable, onCl
               <div className="flex items-center space-x-4">
                   {imagePreview && <img src={imagePreview} alt="preview" className="w-20 h-20 rounded-lg object-cover" loading="lazy" />}
                   <div className="flex-grow">
-                    <label className="block text-sm font-medium text-gray-700">Image</label>
+                    <label className="block text-sm font-medium text-gray-700">Main Image</label>
                     <input type="file" name="image" onChange={handleImageChange} accept="image/*" className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"/>
                   </div>
                    <div className="flex items-center space-x-2">
@@ -229,6 +235,33 @@ const VegetableEditModal: React.FC<VegetableEditModalProps> = ({ vegetable, onCl
                 <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>
                 <textarea name="description" rows={3} value={formData.description} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" />
               </div>
+              {/* Media Section */}
+               <div className="bg-gray-50 p-4 rounded-lg border">
+                    <h3 className="text-md font-semibold text-gray-800 mb-3">Media Gallery</h3>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Gallery Image URLs</label>
+                        <p className="text-xs text-gray-500 mb-1">Enter one full URL per line.</p>
+                        <textarea 
+                            name="images" 
+                            rows={4}
+                            value={formData.images?.join('\n') || ''} 
+                            onChange={handleChange} 
+                            className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm"
+                            placeholder="https://example.com/image1.jpg&#10;https://example.com/image2.jpg"
+                        />
+                    </div>
+                     <div className="mt-3">
+                        <label className="block text-sm font-medium text-gray-700">Video URL (Optional)</label>
+                        <input 
+                            type="url" 
+                            name="videoUrl" 
+                            value={formData.videoUrl || ''} 
+                            onChange={handleChange} 
+                            placeholder="https://example.com/video.mp4" 
+                            className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm" 
+                        />
+                    </div>
+               </div>
             </div>
           </div>
           <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3 rounded-b-lg">

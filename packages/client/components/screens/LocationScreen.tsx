@@ -7,7 +7,7 @@ import L from 'leaflet';
 
 // Define custom icons
 const homeIcon = new L.Icon({
-    iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEwLjcwNyAyLjI5M2ExIDEgMCAwMC0xLjQxNCAwbC03IDdhMSAxIDAgMDAxLjQxNCAxLjQxNEw0IDEwLjQxNFYxN2ExIDEgMCAwMDEwIDFoMmExIDEgMCAwMDAtMXYtMmExIDEgMCAwMTEtMWgyYTEgMSAwIDAxMSAxdjJhMSAxIDAgMDAxIDFoMmExIDEgMCAwMDAtMXYtNi4wODZsLjI5My4yOTNhMSAxIDAgMDAxLjQxNC0xLjQxNGwtNy03eiIgLz48L3N2Zz4=',
+    iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTEwLjcwNyAyLjI5M2ExIDEgMCAwMC0xLjQxNCAwbC03IDdhMSAxIDAgMDAxLjQxNCAxLjQxNEw0IDEwLjQxNFYxN2ExIDEgMCAwMDEwIDFoMmExIDEgMCAwMDAtMXYtMmExIDEgMCAwMTEtMWgyYTEgMSAwIDAxMSAxdjJhMSAxIDAgMDAxIDFoMmExIDEgMCAwMDAtMXYtNi41ODZsLjI5My4yOTNhMSAxIDAgMDAxLjQxNC0xLjQxNGwtNy03eiIgLz48L3N2Zz4=',
     iconSize: [28, 28],
     className: 'bg-blue-600 p-1 rounded-full shadow-lg border-2 border-white'
 });
@@ -15,7 +15,7 @@ const homeIcon = new L.Icon({
 const truckIcon = new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTggMTYuNWExLjUgMS41IDAgMTAtMyAwIDEuNSAxLjUgMCAwMTMgMHpNMTUgMTYuNWExLjUgMS41IDAgMTAtMyAwIDEuNSAxLjUgMCAwMTMgMHoiIC8+PHBhdGggZD0iTTMgNGEyIDIgMCAwMC0yIDJ2NmExIDEgMCAwMC0xIDB2MWExIDEgMCAwMDEgMWgxdi0xYTEgMSAwIDAxMS0xaDdhMiAyIDAgMDEyIDJ2M2EyIDIgMCAwMTItMkgzYTEgMSAwIDAwLTEgMXYxaC0xVjZhMSAxIDAgMDExLTFoMTFhMiAyIDAgMDEyIDJ2MmgtMVY2YTEgMSAwIDAwLTEtMUgzeiIgLz48L3N2Zz4=',
     iconSize: [32, 32],
-    className: 'bg-green-600 p-1 rounded-full shadow-lg border-2 border-white'
+    className: 'bg-green-600 p-1 rounded-full shadow-lg border-2 border-white animate-pulse-marker'
 });
 
 const calculateETA = (distanceKm: number): string => {
@@ -51,10 +51,11 @@ const LocationScreen: React.FC<{ language: Language, onClose: () => void }> = ({
 
   useEffect(() => {
     if (mapContainerRef.current && !mapRef.current) {
+        // FIX: Explicitly type initialCenter to satisfy Leaflet's setView method.
         const initialCenter: L.LatLngExpression = userHomeLocation ? [userHomeLocation.lat, userHomeLocation.lon] : [23.17, 75.78];
-        mapRef.current = L.map(mapContainerRef.current, { zoomControl: false }).setView(initialCenter, 14);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        mapRef.current = L.map(mapContainerRef.current).setView(initialCenter, 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(mapRef.current);
 
         if (userHomeLocation) {
@@ -114,29 +115,33 @@ const LocationScreen: React.FC<{ language: Language, onClose: () => void }> = ({
 
   return (
     <div className="absolute inset-0 bg-gray-100 z-40 animate-slide-in-right-fast flex flex-col">
-       <header className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4">
-          <h2 className="text-xl font-bold text-gray-800 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md">{t.locationTitle}</h2>
-          <button onClick={onClose} className="text-lg text-green-600 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-lg shadow-md hover:bg-white font-semibold">{t.close}</button>
+       <header className="flex items-center justify-between p-4 border-b bg-white flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-800">{t.locationTitle}</h2>
+          <button onClick={onClose} className="text-lg text-green-600 hover:text-green-800 font-semibold">{t.close}</button>
       </header>
+      <div className="flex flex-col h-full p-4">
+        <p className="text-gray-600 mt-1 text-center mb-6">{t.locationDesc}</p>
 
-      <div ref={mapContainerRef} className="w-full h-full flex-grow">
-        {!userHomeLocation && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 z-[1000]">
-                <p className="text-white font-semibold bg-black/50 p-3 rounded-lg">Your address is not yet mapped.</p>
-            </div>
-        )}
-      </div>
-      
-      <div className="absolute bottom-4 left-4 right-4 z-10 text-center bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow-lg">
-          {distance !== null && truckLocation ? (
-              <>
-                  <p className="text-gray-600">The truck is approximately</p>
-                  <p className="text-4xl font-bold text-green-700 my-1">{distance.toFixed(2)} km away</p>
-                  <p className="text-lg font-semibold text-blue-600">{calculateETA(distance)}</p>
-              </>
-          ) : (
-              <p className="text-lg font-semibold text-gray-700">{status}</p>
-          )}
+        <div className="flex-grow rounded-lg overflow-hidden shadow-md border" ref={mapContainerRef} style={{ minHeight: '40vh' }}>
+              {!userHomeLocation && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20 z-[1000]">
+                      <p className="text-white font-semibold bg-black/50 p-3 rounded-lg">Your address is not yet mapped.</p>
+                  </div>
+              )}
+        </div>
+        
+          <div className="mt-6 text-center bg-white p-4 rounded-lg shadow-md">
+              {distance !== null && truckLocation ? (
+                  <>
+                      <p className="text-gray-600">The truck is approximately</p>
+                      <p className="text-4xl font-bold text-green-700 my-1">{distance.toFixed(2)} km away</p>
+                      <p className="text-lg font-semibold text-blue-600">{calculateETA(distance)}</p>
+                  </>
+              ) : (
+                  <p className="text-lg font-semibold text-gray-700">{status}</p>
+              )}
+          </div>
+
       </div>
     </div>
   );

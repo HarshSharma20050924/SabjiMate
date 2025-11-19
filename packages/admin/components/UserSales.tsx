@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { User, Sale, UserWithBill, PaymentPreference } from '@common/types';
 import { getUsers, getSalesData } from '@common/api';
 import LoadingSpinner from '@common/components/LoadingSpinner';
-import UserSalesModal from './UserSalesModal';
 import { getWebSocketUrl } from '@common/utils';
+
+const UserSalesModal = lazy(() => import('./UserSalesModal'));
 
 const RefreshIcon: React.FC<{className: string}> = ({className}) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
@@ -11,7 +12,7 @@ const RefreshIcon: React.FC<{className: string}> = ({className}) => (
     </svg>
 );
 
-const PreferenceBadge: React.FC<{ preference?: PaymentPreference | null }> = ({ preference }) => {
+const PreferenceBadge: React.FC<{ preference?: PaymentPreference }> = ({ preference }) => {
     if (!preference) return null;
     const styles = {
         DAILY: 'bg-blue-100 text-blue-800',
@@ -30,7 +31,6 @@ const UserSales: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserWithBill | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -71,22 +71,12 @@ const UserSales: React.FC = () => {
   }, [fetchData]);
 
   const usersWithBills: UserWithBill[] = useMemo(() => {
-    const usersWithBillData = users.map(user => {
+    return users.map(user => {
       const userSales = sales.filter(sale => sale.userId === user.phone && sale.paymentStatus === 'UNPAID');
       const totalBill = userSales.reduce((acc, sale) => acc + sale.total, 0);
       return { ...user, totalBill };
     });
-    
-    if (!searchTerm) {
-        return usersWithBillData;
-    }
-
-    return usersWithBillData.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm)
-    );
-
-  }, [users, sales, searchTerm]);
+  }, [users, sales]);
 
   const totalRevenue = useMemo(() => {
       return sales.filter(s => s.paymentStatus !== 'UNPAID').reduce((acc, sale) => acc + sale.total, 0);
@@ -103,25 +93,11 @@ const UserSales: React.FC = () => {
 
   return (
     <div>
-        <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center space-x-3">
-                <h2 className="text-2xl font-bold text-gray-800">Users & Sales Overview</h2>
-                <button onClick={fetchData} disabled={isLoading} className="text-blue-600 hover:text-blue-800 disabled:text-gray-400">
-                    <RefreshIcon className={`w-6 h-6 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
-            </div>
-             <div className="relative">
-                <input 
-                    type="text"
-                    placeholder="Search by name or phone..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg shadow-sm w-64"
-                />
-                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                </div>
-            </div>
+        <div className="flex items-center space-x-3 mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">Users & Sales Overview</h2>
+            <button onClick={fetchData} disabled={isLoading} className="text-blue-600 hover:text-blue-800 disabled:text-gray-400">
+                <RefreshIcon className={`w-6 h-6 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
         </div>
       {isLoading ? <LoadingSpinner /> : (
         <>
@@ -156,11 +132,13 @@ const UserSales: React.FC = () => {
         </>
       )}
       {selectedUser && (
-          <UserSalesModal 
-            user={selectedUser}
-            sales={sales.filter(s => s.userId === selectedUser.phone)}
-            onClose={handleCloseModal}
-          />
+          <Suspense fallback={<div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><LoadingSpinner /></div>}>
+            <UserSalesModal 
+              user={selectedUser}
+              sales={sales.filter(s => s.userId === selectedUser.phone)}
+              onClose={handleCloseModal}
+            />
+          </Suspense>
       )}
     </div>
   );

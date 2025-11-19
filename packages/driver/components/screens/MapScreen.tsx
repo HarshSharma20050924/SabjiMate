@@ -17,7 +17,7 @@ const customerIcon = new L.Icon({
 const driverIcon = new L.Icon({
     iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMCAyMCIgZmlsbD0iI2ZmZiI+PHBhdGggZD0iTTggMTYuNWExLjUgMS41IDAgMTAtMyAwIDEuNSAxLjUgMCAwMTMgMHpNMTUgMTYuNWExLjUgMS41IDAgMTAtMyAwIDEuNSAxLjUgMCAwMTMgMHoiIC8+PHBhdGggZD0iTTMgNGEyIDIgMCAwMC0yIDJ2NmExIDEgMCAwMC0xIDB2MWExIDEgMCAwMDEgMWgxdi0xYTEgMSAwIDAxMS0xaDdhMiAyIDAgMDEyIDJ2M2EyIDIgMCAwMTItMkgzYTEgMSAwIDAwLTEgMXYxaC0xVjZhMSAxIDAgMDExLTFoMTFhMiAyIDAgMDEyIDJ2MmgtMVY2YTEgMSAwIDAwLTEtMUgzeiIgLz48L3N2Zz4=',
     iconSize: [32, 32],
-    className: 'bg-green-600 p-1 rounded-full shadow-lg border-2 border-white'
+    className: 'bg-green-600 p-1 rounded-full shadow-lg border-2 border-white animate-pulse-marker'
 });
 
 const MapScreen: React.FC<MapScreenProps> = ({ driverLocation, stops }) => {
@@ -27,15 +27,13 @@ const MapScreen: React.FC<MapScreenProps> = ({ driverLocation, stops }) => {
     useEffect(() => {
         if (mapContainerRef.current && !mapRef.current) {
             mapRef.current = L.map(mapContainerRef.current).setView([driverLocation.lat, driverLocation.lon], 14);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            }).addTo(mapRef.current);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapRef.current);
         }
 
         const map = mapRef.current;
         if (!map) return;
 
-        // Clear previous layers, except the tile layer
+        // Clear previous layers
         map.eachLayer(layer => {
             if (layer instanceof L.Marker || layer instanceof L.Polyline) {
                 map.removeLayer(layer);
@@ -62,7 +60,7 @@ const MapScreen: React.FC<MapScreenProps> = ({ driverLocation, stops }) => {
             // Fit map to show the entire route
             map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
         } else {
-             map.setView([driverLocation.lat, driverLocation.lon], 14);
+             map.flyTo([driverLocation.lat, driverLocation.lon], 14);
         }
 
     }, [driverLocation, stops]);

@@ -10,14 +10,12 @@ const PaymentIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6
 const LanguageIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m4 13l4-4M19 5h-2a2 2 0 00-2 2v1a2 2 0 002 2h2a2 2 0 002-2v-1a2 2 0 00-2-2zM3 17l4-4m-4 4h4" /></svg>;
 const ChevronRightIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>;
 const HelpIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.546-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const ContactIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
-const InfoIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const PolicyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>;
 const EssentialsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" /></svg>;
 const HistoryIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const InstallIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
-const NotificationsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>;
-
+const WalletIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" /><path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" /></svg>;
+const SubscriptionIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" /><path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2H10zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2H10z" clipRule="evenodd" /></svg>;
+const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>;
+const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 
 interface SettingsScreenProps {
   language: Language;
@@ -30,32 +28,20 @@ interface SettingsScreenProps {
   onInstallApp: () => void;
 }
 
-const SettingsItem: React.FC<{icon: React.ReactNode, label: string, onClick?: () => void, children?: React.ReactNode}> = ({ icon, label, onClick, children }) => (
+const SettingsItem: React.FC<{icon: React.ReactNode, label: string, onClick?: () => void, children?: React.ReactNode, disabled?: boolean}> = ({ icon, label, onClick, children, disabled }) => (
     <div 
-      className={`flex items-center justify-between p-4 bg-white ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
-      onClick={onClick}
+      className={`flex items-center justify-between p-4 bg-white ${onClick && !disabled ? 'cursor-pointer hover:bg-gray-50' : ''} ${disabled ? 'opacity-50' : ''}`}
+      onClick={disabled ? undefined : onClick}
     >
         <div className="flex items-center space-x-4">
             <span className="text-green-600">{icon}</span>
             <span className="font-semibold text-gray-800 text-base">{label}</span>
         </div>
         <div>
-            {children ? children : onClick && <ChevronRightIcon />}
+            {children ? children : (onClick && <ChevronRightIcon />)}
         </div>
     </div>
 );
-
-// Helper function to convert urlBase64 to Uint8Array
-function urlBase64ToUint8Array(base64String: string) {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-}
 
 
 const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, onClose, onNavigateToProfile, onNavigateToStandingOrder, onNavigateToHistory, isInstallable, onInstallApp }) => {
@@ -63,64 +49,105 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
     const auth = useContext(AuthContext);
     const [user, setUser] = useState<User>(auth.user!);
     const [isSaving, setIsSaving] = useState(false);
-
-    // --- Notification State ---
-    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
-    const [isNotificationLoading, setIsNotificationLoading] = useState(true);
+    
+    const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(Notification.permission);
+    const [isSubscribing, setIsSubscribing] = useState(false);
 
     useEffect(() => {
-        // Check initial notification status
-        if ('Notification' in window && 'serviceWorker' in navigator) {
-            setIsNotificationsEnabled(Notification.permission === 'granted');
-        }
-        setIsNotificationLoading(false);
+        // Function to update status if it changes in browser settings
+        const checkNotificationStatus = () => setNotificationStatus(Notification.permission);
+        // Check on focus in case user changes permissions in another tab
+        window.addEventListener('focus', checkNotificationStatus);
+        return () => window.removeEventListener('focus', checkNotificationStatus);
     }, []);
 
-    const handleNotificationsToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const shouldEnable = e.target.checked;
-        setIsNotificationLoading(true);
+    const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = "=".repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    };
 
-        if (Notification.permission === 'denied') {
-            alert("You have blocked notifications. Please enable them in your browser settings.");
-            setIsNotificationLoading(false);
+    const handleNotificationRequest = async () => {
+        if (isSubscribing || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            alert('Push Notifications are not supported by your browser.');
             return;
         }
-
-        const registration = await navigator.serviceWorker.ready;
-
-        if (shouldEnable) {
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    throw new Error('Permission not granted');
-                }
-                const vapidPublicKey = await api.getVapidPublicKey();
-                const subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
-                });
-                await api.subscribeToPushNotifications(subscription);
-                setIsNotificationsEnabled(true);
-            } catch (error) {
-                console.error('Failed to subscribe to notifications', error);
-                alert("Could not enable notifications. This may be due to a server configuration issue. Please contact support if the problem persists.");
-                setIsNotificationsEnabled(false);
-            }
-        } else {
-            try {
-                const subscription = await registration.pushManager.getSubscription();
-                if (subscription) {
-                    await api.unsubscribeFromPushNotifications(subscription);
-                    await subscription.unsubscribe();
-                }
-                setIsNotificationsEnabled(false);
-            } catch (error) {
-                console.error('Failed to unsubscribe from notifications', error);
-                // Keep UI optimistic
-                setIsNotificationsEnabled(true);
-            }
+        if (notificationStatus === 'denied') {
+            alert('You have blocked notifications. Please enable them in your browser settings to receive updates.');
+            return;
         }
-        setIsNotificationLoading(false);
+        
+        // We allow re-subscribing even if status is 'granted' to fix desync issues.
+
+        setIsSubscribing(true);
+        try {
+            // Request permission (resolves immediately if already granted)
+            const permission = await Notification.requestPermission();
+            setNotificationStatus(permission);
+
+            if (permission === 'granted') {
+                const swRegistration = await navigator.serviceWorker.ready;
+                const vapidPublicKey = await api.getVapidPublicKey();
+                const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+                
+                // Attempt to subscribe (browser might return existing subscription)
+                let subscription = await swRegistration.pushManager.getSubscription();
+                
+                if (!subscription) {
+                    subscription = await swRegistration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: convertedVapidKey
+                    });
+                }
+                
+                // Send subscription to server (sync)
+                await api.subscribeToPush(subscription);
+                alert('Notifications synced successfully! You should receive updates now.');
+            }
+        } catch (error) {
+            console.error('Failed to subscribe/sync push notifications:', error);
+            alert('Could not sync notifications. Please try again later.');
+        } finally {
+            setIsSubscribing(false);
+        }
+    };
+
+    const getNotificationButton = () => {
+        if (!('PushManager' in window)) {
+             return <span className="text-sm font-semibold text-gray-400">Not Supported</span>
+        }
+        if (isSubscribing) {
+            return <span className="text-sm font-semibold text-gray-500">Syncing...</span>
+        }
+
+        switch (notificationStatus) {
+            case 'granted':
+                return (
+                    <button 
+                        onClick={handleNotificationRequest} 
+                        className="text-sm font-semibold text-green-600 hover:text-green-800 hover:underline focus:outline-none"
+                        title="Click to re-sync if notifications aren't working"
+                    >
+                        Enabled (Tap to Sync)
+                    </button>
+                );
+            case 'denied':
+                return <span className="text-sm font-semibold text-red-600">Blocked</span>
+            default:
+                return (
+                    <button 
+                        onClick={handleNotificationRequest}
+                        className="px-3 py-1 text-sm font-semibold rounded-full bg-blue-500 text-white hover:bg-blue-600"
+                    >
+                        Enable
+                    </button>
+                )
+        }
     };
 
     const handlePreferenceChange = async (preference: PaymentPreference) => {
@@ -140,110 +167,83 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
     };
 
     return (
-        <div className="absolute inset-0 bg-gray-100 z-50 animate-slide-in-right-fast flex flex-col">
-            {/* Header */}
-            <header className="flex items-center justify-between p-4 border-b bg-white flex-shrink-0">
-                <h2 className="text-xl font-bold text-gray-800">{t.settings}</h2>
-                <button onClick={onClose} className="text-lg text-green-600 hover:text-green-800 font-semibold">{t.close}</button>
+        <div className="flex flex-col h-full bg-slate-100">
+            <header className="flex items-center p-4 border-b bg-white flex-shrink-0 sticky top-0 z-10">
+                <button onClick={onClose} className="p-2 -ml-2 text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+                <h2 className="text-xl font-bold text-gray-800 mx-auto">My Account</h2>
+                <div className="w-6"></div>
             </header>
             
             <main className="flex-grow overflow-y-auto p-4 space-y-6">
-                {isInstallable && (
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button 
-                            onClick={onInstallApp}
-                            className="w-full text-center p-4 text-green-700 font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center space-x-3"
-                        >
-                            <InstallIcon /> <span>Install App to Home Screen</span>
-                        </button>
-                    </div>
-                )}
-                
-                {/* Account Section */}
-                <div>
-                    <h3 className="px-4 pb-2 text-xs font-bold text-gray-500 uppercase tracking-wider">{t.account}</h3>
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="divide-y divide-gray-200">
-                            <SettingsItem icon={<ProfileIcon />} label={t.editProfile} onClick={onNavigateToProfile} />
-                            <SettingsItem icon={<HistoryIcon />} label={t.orderHistory} onClick={onNavigateToHistory} />
-                            <SettingsItem icon={<PaymentIcon />} label={t.paymentPreference}>
-                                <div className="flex items-center space-x-1 bg-gray-200 rounded-full p-1 text-sm">
-                                    {(['DAILY', 'WEEKLY', 'MONTHLY'] as PaymentPreference[]).map(pref => (
-                                        <button
-                                            key={pref}
-                                            onClick={() => handlePreferenceChange(pref)}
-                                            className={`px-3 py-1 rounded-full font-semibold transition-colors ${user.paymentPreference === pref ? 'bg-white shadow' : 'text-gray-600'}`}
-                                        >
-                                            {t[pref.toLowerCase() as keyof typeof t]}
-                                        </button>
-                                    ))}
-                                </div>
-                            </SettingsItem>
-                        </div>
+                <div className="bg-white rounded-lg shadow-sm p-4 flex items-center space-x-4">
+                    <img src={user.image || '/logo.svg'} alt="Profile" className="w-20 h-20 rounded-full object-cover border-4 border-slate-200" />
+                    <div>
+                        <h3 className="text-2xl font-bold text-gray-800">{user.name}</h3>
+                        <p className="text-sm text-gray-500 flex items-center">
+                            {user.phone}
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">✓ Verified</span>
+                        </p>
                     </div>
                 </div>
-                
-                {/* Preferences Section */}
+
                 <div>
-                    <h3 className="px-4 pb-2 text-xs font-bold text-gray-500 uppercase tracking-wider">{t.preferences}</h3>
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                       <div className="divide-y divide-gray-200">
-                            <SettingsItem icon={<EssentialsIcon />} label={t.myDailyEssentials} onClick={onNavigateToStandingOrder} />
-                             <SettingsItem icon={<NotificationsIcon />} label={t.notifications}>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" checked={isNotificationsEnabled} onChange={handleNotificationsToggle} disabled={isNotificationLoading} className="sr-only peer" />
-                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-green-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                </label>
-                            </SettingsItem>
-                            <SettingsItem icon={<LanguageIcon />} label={t.language}>
-                                <div className="flex items-center space-x-1 bg-gray-200 rounded-full p-1 text-sm">
-                                    <button onClick={() => setLanguage(Language.EN)} className={`px-3 py-1 rounded-full font-semibold transition-colors ${language === Language.EN ? 'bg-white shadow' : 'text-gray-600'}`}>
-                                        {t.english}
+                    <h3 className="px-4 pb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">My Plan & Payments</h3>
+                    <div className="bg-white rounded-lg shadow-sm overflow-hidden divide-y divide-gray-200">
+                        <SettingsItem icon={<SubscriptionIcon />} label="My Subscription Plan">
+                            <div className="flex items-center space-x-1 bg-gray-200 rounded-full p-1 text-sm">
+                                {(['DAILY', 'WEEKLY', 'MONTHLY'] as PaymentPreference[]).map(pref => (
+                                    <button
+                                        key={pref}
+                                        onClick={() => handlePreferenceChange(pref)}
+                                        className={`px-3 py-1 rounded-full font-semibold transition-colors ${user.paymentPreference === pref ? 'bg-white shadow' : 'text-gray-600'}`}
+                                    >
+                                        {t[pref.toLowerCase() as keyof typeof t]}
                                     </button>
-                                    <button onClick={() => setLanguage(Language.HI)} className={`px-3 py-1 rounded-full font-semibold transition-colors ${language === Language.HI ? 'bg-white shadow' : 'text-gray-600'}`}>
-                                        {t.hindi}
-                                    </button>
-                                </div>
-                            </SettingsItem>
-                        </div>
+                                ))}
+                            </div>
+                        </SettingsItem>
+                        <SettingsItem icon={<WalletIcon />} label="My Payment Methods">
+                             <span className="text-sm text-gray-400 font-semibold">Coming Soon</span>
+                        </SettingsItem>
                     </div>
                 </div>
 
-                 {/* Help & Support Section */}
+                 <div>
+                    <h3 className="px-4 pb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">My Activity</h3>
+                    <div className="bg-white rounded-lg shadow-sm overflow-hidden divide-y divide-gray-200">
+                        <SettingsItem icon={<HistoryIcon />} label={t.orderHistory} onClick={onNavigateToHistory} />
+                        <SettingsItem icon={<EssentialsIcon />} label={t.myDailyEssentials} onClick={onNavigateToStandingOrder} />
+                    </div>
+                </div>
+                
                 <div>
-                    <h3 className="px-4 pb-2 text-xs font-bold text-gray-500 uppercase tracking-wider">{t.helpSupport}</h3>
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="divide-y divide-gray-200">
-                            <SettingsItem icon={<HelpIcon />} label={t.helpCenter} onClick={() => alert('Coming soon!')} />
-                            <SettingsItem icon={<ContactIcon />} label={t.contactUs} onClick={() => alert('Contact us at support@sabzimate.com')} />
-                        </div>
+                    <h3 className="px-4 pb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">Settings & Help</h3>
+                    <div className="bg-white rounded-lg shadow-sm overflow-hidden divide-y divide-gray-200">
+                        <SettingsItem icon={<ProfileIcon />} label="Edit My Profile" onClick={onNavigateToProfile} />
+                        <SettingsItem icon={<LanguageIcon />} label={t.language}>
+                            <div className="flex items-center space-x-1 bg-gray-200 rounded-full p-1 text-sm">
+                                <button onClick={() => setLanguage(Language.EN)} className={`px-3 py-1 rounded-full font-semibold transition-colors ${language === Language.EN ? 'bg-white shadow' : 'text-gray-600'}`}>{t.english}</button>
+                                <button onClick={() => setLanguage(Language.HI)} className={`px-3 py-1 rounded-full font-semibold transition-colors ${language === Language.HI ? 'bg-white shadow' : 'text-gray-600'}`}>{t.hindi}</button>
+                            </div>
+                        </SettingsItem>
+                         <SettingsItem icon={<BellIcon />} label="Push Notifications">
+                            {getNotificationButton()}
+                        </SettingsItem>
+                        {isInstallable && (
+                            <SettingsItem icon={<DownloadIcon />} label="Install App" onClick={onInstallApp} />
+                        )}
+                         <SettingsItem icon={<HelpIcon />} label={t.helpSupport} onClick={() => alert('Contact us at +91 12345 67890 or support@sabzimate.com')} />
                     </div>
                 </div>
 
-                {/* About Section */}
-                <div>
-                     <h3 className="px-4 pb-2 text-xs font-bold text-gray-500 uppercase tracking-wider">{t.about}</h3>
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <div className="divide-y divide-gray-200">
-                            <SettingsItem icon={<PolicyIcon />} label={t.privacyPolicy} onClick={() => alert('Coming soon!')} />
-                            <SettingsItem icon={<InfoIcon />} label={t.termsOfService} onClick={() => alert('Coming soon!')} />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Logout Button */}
                  <div className="pt-4">
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                        <button 
-                            onClick={auth.logout}
-                            className="w-full text-center p-4 text-red-600 font-semibold hover:bg-gray-50 transition-colors"
-                        >
-                            {t.logout}
-                        </button>
+                        <button onClick={auth.logout} className="w-full text-center p-4 text-red-600 font-semibold hover:bg-red-50 transition-colors">{t.logout}</button>
                     </div>
                 </div>
                 
-                 {/* App Version */}
                 <div className="text-center text-xs text-gray-400 pt-4 pb-8">
                     <p>{t.appName} - {t.appVersion} 1.0.0</p>
                 </div>

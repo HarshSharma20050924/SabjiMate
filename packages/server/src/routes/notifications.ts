@@ -2,12 +2,8 @@ import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import prisma from '../db';
 import logger from '../logger';
-import { configurePush } from '../services/notifications';
 
 const router = Router();
-
-// Configure web-push with VAPID keys from environment variables
-configurePush();
 
 // This route is protected and requires a user to be logged in.
 router.use(protect);
@@ -35,6 +31,8 @@ router.post('/subscribe', async (req, res) => {
     }
 
     try {
+        logger.info(`Received push subscription for user ${req.user.phone}`);
+
         // Upsert ensures we don't store duplicate endpoints for the same user
         await prisma.pushSubscription.upsert({
             where: {
@@ -51,7 +49,7 @@ router.post('/subscribe', async (req, res) => {
             },
         });
 
-        logger.info({ userId: req.user.phone }, 'User subscribed to push notifications.');
+        logger.info({ userId: req.user.phone, endpoint: subscription.endpoint.slice(0, 20) + '...' }, 'User successfully subscribed to push notifications.');
         res.status(201).json({ success: true });
     } catch (error) {
         logger.error(error, 'Failed to save push subscription.');

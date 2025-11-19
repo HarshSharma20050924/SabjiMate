@@ -6,10 +6,54 @@ import { Prisma as PrismaTypes, PaymentStatus } from '@prisma/client';
 import { UserWishlist } from '../../../common/types';
 import logger from '../logger';
 import { broadcast } from '../websocket';
+import IORedis from 'ioredis';
+import { sendOTP } from '../services/otp';
 
 const router = Router();
+const redisClient = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
 
 router.use(protect, driverOrAdmin);
+
+// --- NEW OTP-BASED CUSTOMER ACCESS ---
+router.post('/request-customer-access', async (req: Request, res: Response) => {
+    if (!req.user) return res.status(401).json({ error: 'Driver not authenticated.' });
+
+    const { customerId } = req.body;
+    if (!customerId) return res.status(400).json({ error: 'Customer ID is required.' });
+
+    const driverId = req.user.phone;
+    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // 4-digit OTP
+    const redisKey = `customer_access_otp:${driverId}:${customerId}`;
+
+    try {
+        await redisClient.set(redisKey, otp, 'EX', 120); // OTP expires in 2 minutes
+        const messageTemplate = `Your SabziMATE verification code to allow driver access is: {{otp}}. Do not share this with anyone else.`;
+        await sendOTP(customerId, otp, messageTemplate);
+        res.status(200).json({ message: 'OTP sent to customer.' });
+    } catch (error: any) {
+        logger.error(error, `Failed to send access OTP to customer ${customerId}`);
+        res.status(500).json({ error: error.message || 'Could not send access code.' });
+    }
+});
+
+router.post('/verify-customer-access', async (req: Request, res: Response) => {
+    if (!req.user) return res.status(401).json({ error: 'Driver not authenticated.' });
+
+    const { customerId, otp } = req.body;
+    if (!customerId || !otp) return res.status(400).json({ error: 'Customer ID and OTP are required.' });
+
+    const driverId = req.user.phone;
+    const redisKey = `customer_access_otp:${driverId}:${customerId}`;
+
+    const storedOtp = await redisClient.get(redisKey);
+    if (storedOtp && storedOtp === otp) {
+        await redisClient.del(redisKey); // OTP is single-use
+        res.status(200).json({ success: true });
+    } else {
+        res.status(401).json({ error: 'Invalid or expired access code.' });
+    }
+});
+
 
 // GET today's wishlist summary
 router.get('/wishlist/today', async (req: Request, res: Response) => {
@@ -85,23 +129,6 @@ router.get('/wishlist/by-user', async (req: Request, res: Response) => {
         logger.error(error, "Failed to fetch wishlist by user for driver");
         res.status(500).json({ error: 'Could not fetch wishlist details.' });
     }
-});
-
-// This endpoint is now served by the dedicated deliveries router
-router.get('/deliveries/today', async (req: Request, res: Response) => {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const confirmations = await prisma.deliveryConfirmation.findMany({ where: { date: today } });
-    if (confirmations.length === 0) {
-        return res.json({ confirmed: [], rejected: [] });
-    }
-    const userPhones = confirmations.map(c => c.userId);
-    const users = await prisma.user.findMany({ where: { phone: { in: userPhones } } });
-    
-    const confirmed = users.filter(u => confirmations.find(c => c.userId === u.phone)?.choice === 'YES');
-    const rejected = users.filter(u => confirmations.find(c => c.userId === u.phone)?.choice === 'NO');
-
-    res.json({ confirmed, rejected });
 });
 
 // GET a user's sales history

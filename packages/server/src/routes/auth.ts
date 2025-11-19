@@ -11,6 +11,9 @@ import prisma from '../db';
 import { User as PrismaUser } from '@prisma/client';
 import logger from '../logger';
 import { sendOTP } from '../services/otp';
+import * as speakeasy from 'speakeasy';
+import * as qrcode from 'qrcode';
+import { protect, admin } from '../middleware/auth';
 
 const router = Router();
 
@@ -109,6 +112,13 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     if (user.role !== 'ADMIN' && user.role !== 'DRIVER') {
         return res.status(403).json({ error: 'Access denied. This login is for staff only.' });
     }
+    
+    // New 2FA check
+    if (user.isTwoFactorEnabled) {
+        // Generate a temporary token for the 2FA verification step
+        const tempToken = jwt.sign({ userId: user.phone, action: '2fa_verify' }, ACCESS_TOKEN_SECRET, { expiresIn: '5m' });
+        return res.json({ twoFactorRequired: true, tempToken });
+    }
 
     const { accessToken, refreshToken } = generateTokens(user);
     res.json({ accessToken, refreshToken, user });
@@ -127,7 +137,7 @@ router.post('/send-otp', otpLimiter, async (req: Request, res: Response) => {
     await redisClient.set(`otp:${phone}`, otp, 'EX', OTP_EXPIRATION_SECONDS);
     
     try {
-        await sendOTP(phone, otp);
+        await sendOTP(phone, otp); // Uses default message template
         res.json({ message: 'OTP sent successfully.' });
     } catch (error: any) {
         // The service now throws a user-friendly error
@@ -209,6 +219,102 @@ router.post('/logout', async (req: Request, res: Response) => {
         // Even if token is invalid, we can just say it was successful.
         res.status(200).json({ message: 'Logged out.' });
     }
+});
+
+// --- 2FA Routes ---
+
+router.post('/2fa/setup', protect, admin, async (req: Request, res: Response) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authorized' });
+
+    try {
+        const secret = speakeasy.generateSecret({
+            name: `SabziMATE Admin (${req.user.phone})`,
+        });
+
+        await prisma.user.update({
+            where: { phone: req.user.phone },
+            data: { twoFactorSecret: secret.base32 },
+        });
+
+        qrcode.toDataURL(secret.otpauth_url!, (err, data_url) => {
+            if (err) {
+                logger.error(err, "QR code generation failed");
+                return res.status(500).json({ error: 'Could not generate QR code.' });
+            }
+            res.json({ qrCodeUrl: data_url });
+        });
+    } catch (error) {
+        logger.error(error, "2FA setup failed");
+        res.status(500).json({ error: 'Could not set up 2FA.' });
+    }
+});
+
+router.post('/2fa/enable', protect, admin, async (req: Request, res: Response) => {
+    if (!req.user || !req.user.twoFactorSecret) return res.status(400).json({ error: '2FA setup not initiated.' });
+    const { token } = req.body;
+
+    const verified = speakeasy.totp.verify({
+        secret: req.user.twoFactorSecret,
+        encoding: 'base32',
+        token,
+    });
+
+    if (verified) {
+        await prisma.user.update({
+            where: { phone: req.user.phone },
+            data: { isTwoFactorEnabled: true },
+        });
+        res.status(200).json({ message: '2FA enabled successfully.' });
+    } else {
+        res.status(400).json({ error: 'Invalid token. Verification failed.' });
+    }
+});
+
+router.post('/2fa/verify', async (req: Request, res: Response) => {
+    const { tempToken, token } = req.body;
+    if (!tempToken || !token) return res.status(400).json({ error: 'Tokens are required.' });
+
+    try {
+        const decoded = jwt.verify(tempToken, ACCESS_TOKEN_SECRET) as { userId: string; action: string };
+        if (decoded.action !== '2fa_verify') {
+            return res.status(401).json({ error: 'Invalid temporary token.' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { phone: decoded.userId } });
+        if (!user || !user.isTwoFactorEnabled || !user.twoFactorSecret) {
+            return res.status(401).json({ error: 'User not found or 2FA not enabled.' });
+        }
+
+        const verified = speakeasy.totp.verify({
+            secret: user.twoFactorSecret,
+            encoding: 'base32',
+            token,
+        });
+
+        if (verified) {
+            const { accessToken, refreshToken } = generateTokens(user);
+            res.json({ accessToken, refreshToken, user });
+        } else {
+            res.status(401).json({ error: 'Invalid 2FA code.' });
+        }
+    } catch (error) {
+        logger.error(error, "2FA verification failed");
+        res.status(401).json({ error: 'Invalid or expired temporary token.' });
+    }
+});
+
+router.post('/2fa/disable', protect, admin, async (req: Request, res: Response) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authorized' });
+
+    await prisma.user.update({
+        where: { phone: req.user.phone },
+        data: {
+            isTwoFactorEnabled: false,
+            twoFactorSecret: null,
+        },
+    });
+
+    res.status(200).json({ message: '2FA disabled successfully.' });
 });
 
 export default router;

@@ -30,7 +30,6 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) => {
   const [activeScreen, setActiveScreen] = useState<ActiveTab>(ActiveTab.Home);
-  const [showSettings, setShowSettings] = useState(false);
   const [showStandingOrderScreen, setShowStandingOrderScreen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null); // State for PWA install prompt
   const auth = useContext(AuthContext);
@@ -53,19 +52,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
 
   // --- WebSocket for Truck Status ---
   useEffect(() => {
-    // Access action directly from store hook, don't include in dependency array
+    // Access actions directly from store hook, don't include in dependency array
     const setTruckLiveAction = useStore.getState().setTruckLive;
+    const clearLocalWishlistAction = useStore.getState().clearLocalWishlist;
 
     const socket = new WebSocket(getWebSocketUrl());
     ws.current = socket;
     
-    socket.onopen = () => console.log("MainLayout WebSocket connected for live tracking status.");
+    socket.onopen = () => {
+        console.log("MainLayout WebSocket connected.");
+        // Identify the user for targeted messages
+        socket.send(JSON.stringify({ type: 'identify_user', payload: { userId: user.phone } }));
+    };
 
     socket.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
             if (data.type === 'truck_location_broadcast' && data.payload) {
                 setTruckLiveAction(true);
+            }
+            if (data.type === 'wishlist_cleared') {
+                console.log("Received wishlist cleared signal. Clearing local state.");
+                clearLocalWishlistAction();
             }
         } catch (e) {
              // Ignore non-JSON messages or parsing errors
@@ -88,7 +96,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
         }
         ws.current = null;
     };
-  }, []); // Empty dependency array ensures this runs only once on mount.
+  }, [user.phone]); // Rerun if user changes
 
   // --- PWA Install Prompt Handler ---
   useEffect(() => {
@@ -159,22 +167,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
     setActiveScreen(ActiveTab.Home); // Navigate home after confirmation
   }, []);
 
-  const handleNavigateToProfileFromSettings = useCallback(() => {
-    setShowSettings(false);
-    setActiveScreen(ActiveTab.Profile);
-  }, []);
-  
-  const handleNavigateToHistoryFromSettings = useCallback(() => {
-    setShowSettings(false);
-    setActiveScreen(ActiveTab.Bills);
-  }, []);
-
-  const handleNavigateToStandingOrderFromSettings = useCallback(() => {
-    setShowSettings(false);
-    setShowStandingOrderScreen(true);
-  }, []);
-  
-  const handleCloseSettings = useCallback(() => setShowSettings(false), []);
   const handleCloseStandingOrder = useCallback(() => setShowStandingOrderScreen(false), []);
   
   const handleNavClick = useCallback((tab: ActiveTab) => {
@@ -214,6 +206,17 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
                     language={language}
                     onConfirmSuccess={handleConfirmSuccess}
                 />;
+      case ActiveTab.Settings:
+          return <SettingsScreen
+              language={language}
+              setLanguage={setLanguage}
+              onClose={() => setActiveScreen(ActiveTab.Home)}
+              onNavigateToProfile={() => setActiveScreen(ActiveTab.Profile)}
+              onNavigateToHistory={() => setActiveScreen(ActiveTab.Bills)}
+              onNavigateToStandingOrder={() => setShowStandingOrderScreen(true)}
+              isInstallable={!!installPrompt}
+              onInstallApp={handleInstallClick}
+          />;
       default:
         return <HomeScreen 
                     language={language} 
@@ -237,7 +240,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
       <Header 
         user={user}
         onProfileClick={() => setActiveScreen(ActiveTab.Profile)}
-        onSettingsClick={() => setShowSettings(true)}
+        onSettingsClick={() => setActiveScreen(ActiveTab.Settings)}
       />
       <main className="flex-grow overflow-y-auto pb-20 bg-gray-50">
         <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingSpinner /></div>}>
@@ -249,21 +252,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
       {showLiveTracker && (
         <Suspense fallback={<div className="fixed inset-0 bg-gray-50 z-50 flex items-center justify-center"><LoadingSpinner /></div>}>
             <LocationScreen language={language} onClose={() => setShowLiveTracker(false)} />
-        </Suspense>
-      )}
-
-      {showSettings && (
-        <Suspense fallback={<div className="fixed inset-0 bg-gray-50 z-50 flex items-center justify-center"><LoadingSpinner /></div>}>
-            <SettingsScreen
-                language={language}
-                setLanguage={setLanguage}
-                onClose={handleCloseSettings}
-                onNavigateToProfile={handleNavigateToProfileFromSettings}
-                onNavigateToHistory={handleNavigateToHistoryFromSettings}
-                onNavigateToStandingOrder={handleNavigateToStandingOrderFromSettings}
-                isInstallable={!!installPrompt}
-                onInstallApp={handleInstallClick}
-            />
         </Suspense>
       )}
 

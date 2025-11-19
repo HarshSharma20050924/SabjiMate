@@ -11,6 +11,7 @@ export enum ActiveTab {
   MyList = 'MyList',
   Profile = 'Profile',
   History = 'History',
+  Settings = 'Settings',
 }
 
 export type PaymentPreference = 'DAILY' | 'WEEKLY' | 'MONTHLY';
@@ -30,6 +31,7 @@ export interface User {
   password?: string | null; // For admin creating drivers
   paymentPreference?: PaymentPreference | null;
   unpaidSalesCount?: number; // For driver portal UI
+  isTwoFactorEnabled?: boolean;
 }
 
 export interface Vegetable {
@@ -52,7 +54,24 @@ export interface Vegetable {
   isAvailable: boolean;
   averageRating?: number | null;
   ratingCount?: number | null;
+  // Fields for rich product detail view
+  images?: string[];
+  videoUrl?: string | null;
+  highlights?: { title: string; content: string }[];
+  nutritionalInfo?: { name: string; value: string }[];
 }
+
+export interface BatchReview {
+  id: number;
+  saleId: number;
+  userId: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  user?: Pick<User, 'name'>; // For admin view
+  sale?: { items: Pick<SaleItem, 'vegetableName' | 'quantity'>[] }; // For admin context
+}
+
 
 export interface BillEntry {
   id: number; // Sale ID from the database
@@ -63,10 +82,11 @@ export interface BillEntry {
     quantity: number | string;
     price: number;
     vegetableId: number;
-    rating: number | null; // Explicitly null if not rated
+    // rating: number | null; // Removed: Rating is now per-bill
   }[];
   total: number;
   paymentStatus: PaymentStatus;
+  batchReview: { rating: number } | null; // Add this to know if a bill has been rated
 }
 
 export interface OrderItem {
@@ -102,6 +122,7 @@ export interface Sale {
   paymentStatus: PaymentStatus;
   isUrgent?: boolean;
   couponCode?: string | null;
+  batchReview: { rating: number } | null; // Added for consistency
 }
 
 export interface UserWithBill extends User {
@@ -165,6 +186,11 @@ export interface VegetableAdminPayload {
   description?: string | null;
   category?: string;
   isAvailable: boolean;
+  // New fields for rich details
+  images?: string[];
+  videoUrl?: string | null;
+  highlights?: { title: string; content: string }[];
+  nutritionalInfo?: { name: string; value: string }[];
 }
 
 // New type for Recipe of the Day
@@ -201,18 +227,32 @@ export interface AdminAnalyticsSummary {
     totalOrders: number;
     historicalRevenue: { date: string, revenue: number }[];
     topVegetables: { name: string, count: number }[];
-    // AI Enhanced Fields
     salesForecast: { date: string, revenue: number }[];
     smartInsights: {
         type: 'overstock' | 'lapsing_customer';
         title: string;
         description: string;
         action: string;
-        data: any; // e.g., { vegetableName: 'Tomato' } or { userName: 'John Doe', phone: '123' }
+        data: any;
     }[];
     topCustomers: {
         name: string;
         phone: string;
         totalSpent: number;
+    }[];
+    // New Fields for Command Center
+    churnRate: {
+        rate: number;
+        newCustomers: number;
+        churnedCustomers: number;
+    };
+    deliveryEfficiency: {
+        avgOrdersPerDay: number;
+        onTimePercentage: number;
+    };
+    inventoryForecast: {
+        vegetable: string;
+        suggestedOrder: string;
+        reasoning: string;
     }[];
 }

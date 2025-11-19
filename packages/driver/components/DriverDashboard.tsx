@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect, useContext, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useContext, useCallback, lazy, Suspense } from 'react';
 import { getDriverTodaysDeliveries, getDriverTodaysWishlistByUser } from '@common/api';
 import { User, UserWishlist } from '@common/types';
 import LoadingSpinner from '@common/components/LoadingSpinner';
 import { AuthContext } from '@common/AuthContext';
 import { calculateDistance, getWebSocketUrl } from '@common/utils';
-import UserActionModal from './UserActionModal';
 
 // Import new components
 import DriverHeader from './DriverHeader';
@@ -12,6 +11,10 @@ import BottomNav from './BottomNav';
 import RouteScreen from './screens/RouteScreen';
 import MapScreen from './screens/MapScreen';
 import SummaryScreen from './screens/SummaryScreen';
+
+// Lazy load modals
+const UserActionModal = lazy(() => import('./UserActionModal'));
+const CustomerAccessModal = lazy(() => import('./CustomerAccessModal'));
 
 
 type PermissionStatusState = 'loading' | 'prompt' | 'granted' | 'denied';
@@ -36,6 +39,7 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
     const [activeTab, setActiveTab] = useState<ActiveTab>('route');
     const [isBroadcasting, setIsBroadcasting] = useState(false);
     const [managingUser, setManagingUser] = useState<User | null>(null);
+    const [showOtpModalFor, setShowOtpModalFor] = useState<User | null>(null);
 
     // Refs
     const ws = useRef<WebSocket | null>(null);
@@ -142,8 +146,8 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
                     (position) => {
                         const newLocation = { lat: position.coords.latitude, lon: position.coords.longitude };
                         setLocation(newLocation);
-                        if (ws.current?.readyState === WebSocket.OPEN) {
-                           ws.current.send(JSON.stringify({ type: 'driver_location_update', payload: newLocation }));
+                        if (ws.current?.readyState === WebSocket.OPEN && driver?.phone) {
+                           ws.current.send(JSON.stringify({ type: 'driver_location_update', payload: { ...newLocation, driverId: driver.phone } }));
                         }
                     },
                     (geoError) => {
@@ -156,6 +160,11 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             ws.current.onerror = () => setError('WebSocket connection failed.');
             ws.current.onclose = () => { if (isBroadcasting) handleToggleBroadcast(); };
         }
+    };
+    
+    const handleOtpSuccess = (user: User) => {
+        setShowOtpModalFor(null);
+        setManagingUser(user);
     };
 
     if (permissionStatus === 'loading') {
@@ -200,14 +209,17 @@ const DriverDashboard: React.FC<{ isOnline: boolean }> = ({ isOnline }) => {
             <DriverHeader onLogout={logout} driverName={driver?.name} isBroadcasting={isBroadcasting} onToggleBroadcast={handleToggleBroadcast} isOnline={isOnline} />
             
             <main className="flex-grow overflow-y-auto pb-16">
-                {activeTab === 'route' && <RouteScreen stops={sortedStops} onManageUser={setManagingUser} isLoading={isLoadingData} onRefresh={fetchData} />}
+                {activeTab === 'route' && <RouteScreen stops={sortedStops} onManageUser={setShowOtpModalFor} isLoading={isLoadingData} onRefresh={fetchData} />}
                 {activeTab === 'map' && <MapScreen driverLocation={location} stops={sortedStops} />}
                 {activeTab === 'summary' && <SummaryScreen />}
             </main>
             
             <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-            {managingUser && <UserActionModal user={managingUser} userWishlist={userWishlistForManagedUser} onClose={() => { setManagingUser(null); fetchData(); }} />}
+            <Suspense fallback={<div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><LoadingSpinner /></div>}>
+                {showOtpModalFor && <CustomerAccessModal user={showOtpModalFor} onClose={() => setShowOtpModalFor(null)} onSuccess={() => handleOtpSuccess(showOtpModalFor)} />}
+                {managingUser && <UserActionModal user={managingUser} userWishlist={userWishlistForManagedUser} onClose={() => { setManagingUser(null); fetchData(); }} />}
+            </Suspense>
         </div>
     );
 };

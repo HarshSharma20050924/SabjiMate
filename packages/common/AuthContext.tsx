@@ -14,6 +14,7 @@ export interface AuthContextType {
   logout: () => void;
   updateUserSession: (user: User) => void; // For updating user in context after onboarding/profile edit
   handleGoogleLogin: (token: string, user: User) => void; // This needs to be adapted
+  setSession: (accessToken: string, refreshToken: string, user: User) => void;
 }
 
 export const AuthContext = createContext<AuthContextType>(null!);
@@ -119,7 +120,15 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
   const loginWithPassword = useCallback(async (phone: string, password: string) => {
     setIsLoading(true);
     try {
-        const { accessToken, refreshToken, user: userObject } = await api.loginUser(phone, password);
+        const result = await api.loginUser(phone, password);
+        
+        // Handle the 2FA case
+        if ('twoFactorRequired' in result) {
+            // This is handled by AdminLogin component, we just stop here
+            return;
+        }
+
+        const { accessToken, refreshToken, user: userObject } = result;
         const decoded: DecodedToken = jwtDecode(accessToken);
 
         if (decoded.role !== 'ADMIN' && decoded.role !== 'DRIVER') {
@@ -156,6 +165,13 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
         localStorage.setItem('authUser', JSON.stringify(updatedUser));
       }
   }, []);
+
+  const setSession = useCallback((accessToken: string, refreshToken: string, userObject: User) => {
+    api.setAuthTokens(accessToken, refreshToken);
+    localStorage.setItem('authUser', JSON.stringify(userObject));
+    setToken(accessToken);
+    setUser(userObject);
+  }, []);
   
   const value: AuthContextType = useMemo(() => ({
     user,
@@ -167,7 +183,8 @@ export const AuthProvider: React.FC<{children: ReactNode}> = ({ children }) => {
     logout,
     updateUserSession,
     handleGoogleLogin,
-  }), [user, token, isInitialLoading, isLoading, loginWithOtp, loginWithPassword, logout, updateUserSession, handleGoogleLogin]);
+    setSession,
+  }), [user, token, isInitialLoading, isLoading, loginWithOtp, loginWithPassword, logout, updateUserSession, handleGoogleLogin, setSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

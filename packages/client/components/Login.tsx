@@ -16,11 +16,11 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
   const auth = useContext(AuthContext);
 
   const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState<string[]>(new Array(6).fill(''));
   const [error, setError] = useState('');
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const formRef = useRef<HTMLFormElement | null>(null);
+  const otpInputsRef = useRef<HTMLInputElement[]>([]);
 
   // Resend Cooldown Timer
   useEffect(() => {
@@ -39,19 +39,21 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       return;
     }
     const abortController = new AbortController();
+    const handleOtp = (otpCredential: any) => {
+        if (!otpCredential) return;
+        const receivedOtp = otpCredential.code;
+        if (receivedOtp) {
+            setOtp(receivedOtp.split(''));
+            // Auto-submit after a short delay to allow state update
+            setTimeout(() => {
+                handleSubmitOtp(receivedOtp);
+            }, 100);
+        }
+    };
     navigator.credentials.get({
       otp: { transport: ['sms'] },
       signal: abortController.signal
-    } as any).then(otpCredential => {
-      if (!otpCredential) return;
-      const receivedOtp = (otpCredential as any).code;
-      if (receivedOtp) {
-          setOtp(receivedOtp);
-          setTimeout(() => {
-              formRef.current?.requestSubmit();
-          }, 100);
-      }
-    }).catch(err => {
+    } as any).then(handleOtp).catch(err => {
       console.log("WebOTP API failed:", err);
     });
 
@@ -86,7 +88,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
   const handleResendOtp = async () => {
       if (resendCooldown > 0) return;
       setError('');
-      setOtp('');
+      setOtp(new Array(6).fill(''));
       try {
         await api.sendOtp(phone);
         startResendCooldown();
@@ -94,37 +96,61 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
         setError(err.message || 'Failed to resend OTP.');
       }
   };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (auth?.isLoading) return;
+  
+  const handleSubmitOtp = async (finalOtp: string) => {
+    if (auth?.isLoading || finalOtp.length !== 6) return;
     setError('');
     
-    if (otp.length !== 6) {
-        setError('Please enter the full 6-digit OTP.');
-        return;
-    }
     try {
-        await auth.loginWithOtp(phone, otp);
+        await auth.loginWithOtp(phone, finalOtp);
     } catch (err: any) {
         setError(err.message || 'OTP verification failed.');
-        setOtp('');
+        setOtp(new Array(6).fill(''));
+        otpInputsRef.current[0]?.focus();
     }
   };
 
-  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
-    setOtp(value);
-    if (value.length === 6) {
-      setTimeout(() => {
-        formRef.current?.requestSubmit();
-      }, 100);
+  const handleOtpFormSubmit = (e: React.FormEvent) => {
+      e.preventDefault();
+      handleSubmitOtp(otp.join(''));
+  }
+
+  const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+
+    // If a digit is entered, move to the next input
+    if (value && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
     }
+    
+    // If all inputs are filled, submit
+    if (newOtp.every(digit => digit !== '')) {
+      handleSubmitOtp(newOtp.join(''));
+    }
+  };
+
+  const handleOtpKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+      if (e.key === 'Backspace' && !otp[index] && index > 0) {
+          otpInputsRef.current[index - 1]?.focus();
+      }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+      const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+      if (pastedData.length === 6) {
+          e.preventDefault();
+          const newOtp = pastedData.split('');
+          setOtp(newOtp);
+          handleSubmitOtp(pastedData);
+      }
   };
 
   const handleEditNumber = () => {
     setError('');
-    setOtp('');
+    setOtp(new Array(6).fill(''));
     setResendCooldown(0);
     setStep('phone');
   };
@@ -176,7 +202,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       </div>
 
       <div className="mb-6 w-full max-w-sm">
-          <img src="https://thumbs.dreamstime.com/b/background-bucket-full-fresh-vegetables-garden-ai-gen-background-bucket-full-fresh-vegetables-346402643.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
+          <img src="https://t4.ftcdn.net/jpg/03/20/39/89/360_F_320398931_CO8r6ymeSFqeoY1cE6P8dbSGRYiAYj4a.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
       </div>
       
       <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg w-full max-w-sm">
@@ -219,18 +245,24 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
                           <button type="button" onClick={handleEditNumber} className="ml-2 text-sm font-semibold text-green-700 hover:underline focus:outline-none">(Edit)</button>
                       </span>
                   </p>
-                  <form ref={formRef} onSubmit={handleVerifyOtp} className="space-y-6">
-                      <input
-                        type="tel"
-                        value={otp}
-                        onChange={handleOtpChange}
-                        placeholder="_ _ _ _ _ _"
-                        maxLength={6}
-                        className={`w-full h-16 text-center text-3xl font-bold tracking-[1em] bg-gray-100 border-2 rounded-lg transition-all ${error ? 'border-red-500 animate-shake' : 'border-gray-200 focus:border-green-600 focus:ring-2 focus:ring-green-600'}`}
-                        autoComplete="one-time-code"
-                        inputMode="numeric"
-                        autoFocus
-                      />
+                  <form onSubmit={handleOtpFormSubmit} className="space-y-6">
+                       <div className="flex justify-center space-x-2" onPaste={handleOtpPaste}>
+                            {otp.map((digit, index) => (
+                                <input
+                                    key={index}
+                                    ref={el => otpInputsRef.current[index] = el!}
+                                    type="tel"
+                                    maxLength={1}
+                                    value={digit}
+                                    onChange={e => handleOtpChange(e, index)}
+                                    onKeyDown={e => handleOtpKeyDown(e, index)}
+                                    className={`w-12 h-14 text-center text-2xl font-bold bg-gray-100 border-2 rounded-lg transition-all ${error ? 'border-red-500 animate-shake' : 'border-gray-200 focus:border-green-600 focus:ring-2 focus:ring-green-600'}`}
+                                    autoComplete="one-time-code"
+                                    inputMode="numeric"
+                                    autoFocus={index === 0}
+                                />
+                            ))}
+                        </div>
                       <button type="submit" disabled={auth?.isLoading} className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:bg-green-700 disabled:bg-gray-400">
                           {auth?.isLoading ? t.loading : t.verifyAndContinue}
                       </button>

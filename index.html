@@ -34,12 +34,6 @@
         from { opacity: 1; }
         to { opacity: 0; }
       }
-      @keyframes confirmation-pop-fade {
-        0% { transform: scale(0.7); opacity: 0; }
-        40% { transform: scale(1.1); opacity: 1; }
-        60% { transform: scale(1); opacity: 1; }
-        100% { transform: scale(1); opacity: 0; }
-      }
       @keyframes pulse-bg {
         0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
         50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
@@ -98,12 +92,79 @@
         to { transform: translateY(0); opacity: 1; }
       }
 
+      /* --- Sophisticated Confirmation Overlay Animations (3s lifecycle) --- */
+      @keyframes confirmation-backdrop-fade-in-out {
+        0% { opacity: 0; }
+        10% { opacity: 1; } /* Fade in fast */
+        80% { opacity: 1; } /* Hold */
+        100% { opacity: 0; } /* Fade out */
+      }
+
+      @keyframes confirmation-modal-pop-in-out {
+        0% { opacity: 0; transform: scale(0.8); }
+        10% { opacity: 1; transform: scale(1.05); } /* Pop in */
+        15% { opacity: 1; transform: scale(1); } /* Settle */
+        80% { opacity: 1; transform: scale(1); } /* Hold */
+        100% { opacity: 0; transform: scale(0.9); } /* Fade out */
+      }
+
+      @keyframes draw-circle {
+        0% { stroke-dashoffset: 157; } /* circumference of circle with r=25 */
+        25% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: 0; }
+      }
+
+      @keyframes draw-tick {
+        0% { stroke-dashoffset: 36; } /* length of the tick path */
+        20% { stroke-dashoffset: 36; } /* Wait for circle to start drawing */
+        45% { stroke-dashoffset: 0; } /* Draw the tick */
+        100% { stroke-dashoffset: 0; }
+      }
+
+      @keyframes pulse-marker {
+        0%, 100% {
+          transform: scale(1);
+          box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7);
+        }
+        70% {
+          transform: scale(1.05);
+          box-shadow: 0 0 0 10px rgba(22, 163, 74, 0);
+        }
+      }
+
+      .confirmation-backdrop {
+        background-color: rgba(0, 0, 0, 0.4);
+        animation: confirmation-backdrop-fade-in-out 3s ease-in-out forwards;
+      }
+
+      .confirmation-modal {
+        animation: confirmation-modal-pop-in-out 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+      }
+
+      .checkmark-circle {
+        stroke-dasharray: 157;
+        stroke-dashoffset: 157;
+        stroke-width: 3;
+        stroke: #4CAF50; /* Vibrant Green */
+        animation: draw-circle 3s ease-in-out forwards;
+      }
+
+      .checkmark-tick {
+        stroke-dasharray: 36;
+        stroke-dashoffset: 36;
+        stroke-width: 4;
+        stroke: #4CAF50; /* Vibrant Green */
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        animation: draw-tick 3s ease-in-out forwards;
+      }
+
+
       .animate-zoom-in { animation: zoom-in 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
       .animate-slide-in-left { animation: slide-in-left 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.5s both; }
       .animate-slide-in-right { animation: slide-in-right 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.5s both; }
       .animate-slide-in-right-fast { animation: slide-in-right-fast 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; }
       .animate-fade-out { animation: fade-out 0.5s ease-out both; }
-      .animate-confirmation { animation: confirmation-pop-fade 1.5s ease-in-out forwards; }
       .animate-pulse-bg { animation: pulse-bg 2s infinite; }
       .animate-shake { animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both; }
       /* New Animation Classes */
@@ -113,6 +174,7 @@
       .animate-slide-in-up-subtle { animation: slide-in-up-subtle 0.5s ease-out both; }
       .animate-banner-slide-in { animation: banner-slide-in 0.6s cubic-bezier(0.25, 1, 0.5, 1) 0.2s both; }
       .animate-listening-pulse { animation: listening-pulse 1.5s infinite ease-in-out; }
+      .animate-pulse-marker { animation: pulse-marker 2s infinite; }
       /* Driver Portal Animation Classes */
       .animate-pulse-broadcast { animation: pulse-broadcast 1.5s infinite; }
       .animate-slide-in-bottom { animation: slide-in-bottom 0.5s cubic-bezier(0.25, 1, 0.5, 1) both; }
@@ -175,7 +237,9 @@
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
     "crypto": "https://aistudiocdn.com/crypto@^1.0.1",
     "web-push": "https://aistudiocdn.com/web-push@^3.6.7",
-    "recharts": "https://aistudiocdn.com/recharts@^3.3.0"
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0",
+    "speakeasy": "https://aistudiocdn.com/speakeasy@^2.0.0",
+    "qrcode": "https://aistudiocdn.com/qrcode@^1.5.4"
   }
 }
 </script>
@@ -184,11 +248,10 @@
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
     <script type="module">
-      // Only register the service worker in production builds.
-      // This prevents caching issues and interference with Vite's HMR in development.
-      if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      // Register the service worker for push notifications.
+      // Enabled in all environments to allow testing of Push Notifications in Dev.
+      if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          // Register the main app service worker
           navigator.serviceWorker.register('/sw-client.js')
             .then(registration => console.log('Client ServiceWorker registration successful with scope: ', registration.scope))
             .catch(err => console.log('Client ServiceWorker registration failed: ', err));

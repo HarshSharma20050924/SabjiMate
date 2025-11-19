@@ -6,18 +6,31 @@ interface ConfirmationOverlayProps {
   onClose: () => void;
 }
 
-const ConfirmationTickIcon: React.FC = () => (
-    <svg className="w-24 h-24 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+// New sophisticated checkmark icon designed for animation
+const AnimatedCheckmarkIcon: React.FC = () => (
+    <svg className="w-24 h-24" viewBox="0 0 52 52">
+        <circle 
+            className="checkmark-circle" 
+            cx="26" 
+            cy="26" 
+            r="25" 
+            fill="none"
+        />
+        <path 
+            className="checkmark-tick" 
+            fill="none" 
+            d="M14 27l8 8 16-16"
+        />
     </svg>
 );
 
 const ConfirmationOverlay: React.FC<ConfirmationOverlayProps> = ({ show, message, onClose }) => {
   useEffect(() => {
     if (show) {
+      // The total animation duration is 3 seconds.
       const timer = setTimeout(() => {
         onClose();
-      }, 1500); // Overlay visible for 1.5 seconds
+      }, 3000); 
       return () => clearTimeout(timer);
     }
   }, [show, onClose]);
@@ -27,10 +40,13 @@ const ConfirmationOverlay: React.FC<ConfirmationOverlayProps> = ({ show, message
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center animate-zoom-in text-center">
-        <ConfirmationTickIcon />
-        <p className="mt-4 text-xl font-bold text-gray-800 max-w-xs">{message}</p>
+    <div className="confirmation-backdrop fixed inset-0 flex items-center justify-center z-[100] p-4">
+      <div className="confirmation-modal bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center text-center border border-gray-200/50 w-full max-w-xs">
+        <AnimatedCheckmarkIcon />
+        <h2 className="mt-5 text-2xl font-bold text-gray-800">{message}</h2>
+        <p className="mt-2 text-base text-gray-500">
+          We'll keep an eye on the prices for you.
+        </p>
       </div>
     </div>
   );

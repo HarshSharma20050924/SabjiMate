@@ -13,6 +13,7 @@ const RefreshIcon: React.FC<{className: string}> = ({className}) => (
 const UrgentOrdersQueue: React.FC = () => {
     const [orders, setOrders] = useState<Sale[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [assignments, setAssignments] = useState<Record<number, string>>({}); // { [orderId]: driverId }
     const ws = useRef<WebSocket | null>(null);
 
     const fetchOrders = useCallback(async () => {
@@ -38,6 +39,9 @@ const UrgentOrdersQueue: React.FC = () => {
                 // Add the new order to the top of the list
                 setOrders(prevOrders => [data.payload, ...prevOrders]);
             }
+             if (data.type === 'order_accepted_by_driver') {
+                setAssignments(prev => ({ ...prev, [data.payload.orderId]: data.payload.driverId }));
+            }
         };
 
         return () => ws.current?.close();
@@ -55,9 +59,11 @@ const UrgentOrdersQueue: React.FC = () => {
                 <div className="bg-white rounded-lg shadow">
                     {orders.length > 0 ? (
                         <ul className="divide-y divide-gray-200">
-                            {orders.map(order => (
+                            {orders.map(order => {
+                                const assignedDriver = assignments[order.id];
+                                return (
                                 <li key={order.id} className="p-4">
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-start">
                                         <div>
                                             <p className="font-semibold text-gray-900">Order #{order.id}</p>
                                             <p className="text-sm text-gray-600">User Phone: {order.userId}</p>
@@ -65,12 +71,19 @@ const UrgentOrdersQueue: React.FC = () => {
                                         </div>
                                         <div className="text-right">
                                              <p className="font-bold text-lg text-green-600">₹{order.total.toFixed(2)}</p>
-                                             <span className={`px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-800`}>
-                                                UNPAID
+                                             <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                                                 assignedDriver ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                                             }`}>
+                                                {assignedDriver ? `ASSIGNED` : 'PENDING'}
                                             </span>
                                         </div>
                                     </div>
                                     <div className="mt-2 border-t pt-2">
+                                        {assignedDriver && (
+                                            <p className="text-sm font-semibold text-blue-700 mb-2">
+                                                Accepted by Driver: {assignedDriver}
+                                            </p>
+                                        )}
                                         <p className="text-sm font-semibold">Items:</p>
                                         <ul className="list-disc list-inside text-sm text-gray-600">
                                             {order.items.map((item, index) => (
@@ -79,7 +92,8 @@ const UrgentOrdersQueue: React.FC = () => {
                                         </ul>
                                     </div>
                                 </li>
-                            ))}
+                                );
+                            })}
                         </ul>
                     ) : (
                         <p className="text-center text-gray-500 p-8">No pending urgent orders.</p>

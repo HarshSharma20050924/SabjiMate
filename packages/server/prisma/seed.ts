@@ -1,4 +1,3 @@
-
 // FIXME: This file may show a TypeScript error if the Prisma client has not been generated.
 // Run `npx prisma generate` in your terminal to fix this.
 // @ts-ignore: This will be resolved by running `npx prisma generate`
@@ -14,6 +13,8 @@ const sampleVegetables = [
         sabzimatePrice: 40.0,
         unit: { EN: 'kg', HI: 'किलो' },
         image: 'https://images.unsplash.com/photo-1561155634-425b768a4d7a?q=80&w=1740&auto=format&fit=crop',
+        averageRating: 4.5,
+        ratingCount: 25,
     },
     {
         name: { EN: 'Potato', HI: 'आलू' },
@@ -21,6 +22,8 @@ const sampleVegetables = [
         sabzimatePrice: 30.0,
         unit: { EN: 'kg', HI: 'किलो' },
         image: 'https://images.unsplash.com/photo-1518977676601-b53f82aba657?q=80&w=1740&auto=format&fit=crop',
+        averageRating: 4.2,
+        ratingCount: 18,
     },
     {
         name: { EN: 'Onion', HI: 'प्याज' },
@@ -35,6 +38,8 @@ const sampleVegetables = [
         sabzimatePrice: 55.0,
         unit: { EN: 'kg', HI: 'किलो' },
         image: 'https://images.unsplash.com/photo-1590196921406-039c59392348?q=80&w=1740&auto=format&fit=crop',
+        averageRating: 4.8,
+        ratingCount: 42,
     },
 ];
 
@@ -86,6 +91,8 @@ async function main() {
                 sabzimatePrice: veg.sabzimatePrice,
                 unit: veg.unit,
                 image: veg.image,
+                averageRating: veg.averageRating,
+                ratingCount: veg.ratingCount,
             },
             create: {
                 name: veg.name,
@@ -93,6 +100,8 @@ async function main() {
                 sabzimatePrice: veg.sabzimatePrice,
                 unit: veg.unit,
                 image: veg.image,
+                averageRating: veg.averageRating,
+                ratingCount: veg.ratingCount,
             },
         });
     }

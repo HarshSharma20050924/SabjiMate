@@ -1,14 +1,18 @@
+
 import { Router, Request, Response } from 'express';
 import prisma from '../db';
 import { protect } from '../middleware/auth';
-import { broadcast } from '../websocket';
+import { broadcast, driverConnections, userConnections } from '../websocket';
 // @ts-ignore: This will be resolved by running `npx prisma generate`
 import { Vegetable as PrismaVegetable, LocationPrice as PrismaLocationPrice, DeliveryArea as PrismaDeliveryArea, Prisma as PrismaTypes, PaymentStatus } from '@prisma/client';
 import logger from '../logger';
 import { forwardGeocode } from '../services/geocoding';
 import Razorpay from 'razorpay';
 import IORedis from 'ioredis';
-import { GoogleGenAI } from '@google/genai';
+import { WebSocket } from 'ws';
+import { BillEntry } from '../../../common/types';
+import { GoogleGenAI, Type } from '@google/genai';
+
 
 const router = Router();
 const redisClient = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
@@ -69,39 +73,6 @@ router.get('/promotions/validate/:code', protect, async (req: Request, res: Resp
 
 router.use(protect);
 
-router.post('/recipe-suggestion', async (req: Request, res: Response) => {
-    const { prompt, wishlist } = req.body;
-
-    if (!process.env.API_KEY) {
-        return res.status(500).json({ error: 'AI service is not configured.' });
-    }
-
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        let fullPrompt = prompt;
-        if (wishlist && wishlist.length > 0) {
-            const itemList = wishlist.map((item: {name: string, quantity: string}) => `${item.name} (${item.quantity})`).join(', ');
-            fullPrompt += `\n\nI have these vegetables in my list: ${itemList}. Can you suggest a recipe using them?`;
-        }
-        
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: fullPrompt,
-            config: {
-                systemInstruction: "You are a friendly and helpful kitchen assistant for Indian home cooks (often called 'aunties'). Your tone should be warm, encouraging, and conversational. Respond primarily in Hinglish or simple Hindi. When asked for a recipe, provide it in a clear, step-by-step format. You can also ask clarifying questions. If a user provides a list of their vegetables, you can suggest recipes using those.",
-            },
-        });
-
-        res.json({ suggestion: response.text });
-
-    } catch (error) {
-        logger.error(error, "Error getting recipe from Gemini");
-        res.status(500).json({ error: 'Could not get a recipe right now.' });
-    }
-});
-
-
 // --- New Urgent Order Endpoint ---
 const RAZORPAY_KEY_ID = "rzp_test_RVRsuEUd9LNZIM";
 const RAZORPAY_KEY_SECRET = "XnNMfcXkY0WhHvojoEGyM5GQ";
@@ -120,6 +91,7 @@ router.post('/orders/urgent', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Missing order details.' });
     }
 
+    let sale: any;
     try {
         const subtotal = items.reduce((acc: number, item: any) => acc + item.price, 0);
         let finalTotal = 0;
@@ -155,7 +127,6 @@ router.post('/orders/urgent', async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Price calculation mismatch. Please try again." });
         }
         
-        let sale: any;
         await prisma.$transaction(async (tx) => {
              const saleData = {
                 userId: req.user!.phone,
@@ -184,8 +155,8 @@ router.post('/orders/urgent', async (req: Request, res: Response) => {
         });
 
 
+        // Respond to client first
         if (paymentMethod === 'COD') {
-            broadcast({ type: 'new_urgent_order', payload: sale });
             res.status(201).json({ sale, message: 'COD order placed successfully' });
         } else if (paymentMethod === 'ONLINE') {
             const razorpayOptions = {
@@ -201,6 +172,54 @@ router.post('/orders/urgent', async (req: Request, res: Response) => {
     } catch (error: any) {
         logger.error(error, "Failed to create urgent order");
         res.status(500).json({ error: error.message || 'Could not create urgent order' });
+        return; // Stop execution if order creation fails
+    }
+
+    // --- Post-Response Actions: Notify Admins & Find Drivers ---
+    
+    // Notify admins immediately that a new order has been created.
+    broadcast({ type: 'new_urgent_order', payload: sale });
+
+    // --- NEW DRIVER ASSIGNMENT LOGIC ---
+    try {
+        const storeLocation = { lat: 23.1793, lon: 75.7849 }; // Hardcoded Ujjain store location
+
+        // 1. Get all drivers who are broadcasting their location.
+        const availableDriverIds = await redisClient.smembers('available_drivers');
+        if (availableDriverIds.length === 0) {
+            logger.warn(`No available drivers online for order ${sale.id}.`);
+            return;
+        }
+
+        // 2. Find drivers within a 10km radius from the store.
+        const nearbyDriverIds: string[] = await redisClient.georadius(
+            'drivers_locations',
+            storeLocation.lon,
+            storeLocation.lat,
+            10,
+            'km'
+        ) as string[];
+
+        // 3. Find drivers who are both available AND nearby.
+        const eligibleDriverIds = availableDriverIds.filter(id => nearbyDriverIds.includes(id));
+        
+        if (eligibleDriverIds.length > 0) {
+            logger.info(`Found ${eligibleDriverIds.length} eligible drivers for order ${sale.id}. Broadcasting request...`);
+            
+            // 4. Broadcast to the closest 3 (or fewer) eligible drivers.
+            const driversToNotify = eligibleDriverIds.slice(0, 3);
+            driversToNotify.forEach(driverId => {
+                const driverWs = driverConnections.get(driverId);
+                if (driverWs && driverWs.readyState === WebSocket.OPEN) {
+                    driverWs.send(JSON.stringify({ type: 'new_urgent_order_request', payload: sale }));
+                    logger.info(`Sent order request to driver ${driverId} for order ${sale.id}.`);
+                }
+            });
+        } else {
+            logger.warn(`No eligible drivers found nearby for order ${sale.id}.`);
+        }
+    } catch (assignmentError) {
+        logger.error(assignmentError, `Failed to run driver assignment logic for order ${sale.id}`);
     }
 });
 
@@ -348,23 +367,30 @@ router.get('/bills', async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Not authorized' });
     const sales = await prisma.sale.findMany({
         where: { userId: req.user.phone },
-        include: { items: { include: { review: true } } }, // Include review for each item
+        include: { 
+            items: true,
+            batchReview: {
+                select: {
+                    rating: true
+                }
+            }
+        },
         orderBy: { date: 'desc' }
     });
 
-    const bills = sales.map(sale => ({
+    const bills: BillEntry[] = sales.map(sale => ({
         id: sale.id,
         date: sale.date.toISOString().split('T')[0],
         items: sale.items.map(item => ({
-            id: item.id, // This is the SaleItem ID
+            id: item.id,
             name: item.vegetableName,
             quantity: item.quantity,
             price: item.price,
             vegetableId: item.vegetableId,
-            rating: item.review?.rating || null, // Pass existing rating
         })),
         total: sale.total,
-        paymentStatus: sale.paymentStatus
+        paymentStatus: sale.paymentStatus,
+        batchReview: sale.batchReview
     }));
     res.json(bills);
 });
@@ -374,30 +400,50 @@ router.post('/sales/record', async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Not authorized' });
     const { userId, items, total, isUrgent } = req.body;
     try {
-        const sale = await prisma.sale.create({
-            data: {
-                userId,
-                date: new Date(),
-                total,
-                isUrgent: isUrgent || false,
-                paymentStatus: PaymentStatus.UNPAID,
-                items: {
-                    create: items.map((item: any) => ({
-                        vegetableId: item.vegetableId,
-                        vegetableName: item.vegetableName,
-                        quantity: item.quantity,
-                        price: item.price
-                    }))
-                }
-            },
-            include: { items: true } // Include items in the response
+        const sale = await prisma.$transaction(async (tx) => {
+            const newSale = await tx.sale.create({
+                data: {
+                    userId,
+                    date: new Date(),
+                    total,
+                    isUrgent: isUrgent || false,
+                    paymentStatus: PaymentStatus.UNPAID,
+                    items: {
+                        create: items.map((item: any) => ({
+                            vegetableId: item.vegetableId,
+                            vegetableName: item.vegetableName,
+                            quantity: item.quantity,
+                            price: item.price
+                        }))
+                    }
+                },
+                include: { items: true }
+            });
+
+            // Clear the user's wishlist for today
+            const today = new Date();
+            today.setUTCHours(0, 0, 0, 0);
+            await tx.wishlist.deleteMany({
+                where: { userId: userId, date: today },
+            });
+
+            return newSale;
         });
-        
+
+        // Notify admins/drivers of the new sale
         if (sale.isUrgent) {
             broadcast({ type: 'new_urgent_order', payload: sale });
         }
         
+        // Notify the specific user's client to clear its local wishlist state
+        const userSocket = userConnections.get(userId);
+        if (userSocket && userSocket.readyState === WebSocket.OPEN) {
+            userSocket.send(JSON.stringify({ type: 'wishlist_cleared' }));
+            logger.info(`Sent wishlist_cleared notification to user ${userId}`);
+        }
+        
         res.status(201).json(sale);
+
     } catch (error) {
         logger.error(error, "Failed to record sale");
         res.status(500).json({ error: 'Could not record sale' });
@@ -405,43 +451,100 @@ router.post('/sales/record', async (req: Request, res: Response) => {
 });
 
 
-router.post('/reviews', async (req: Request, res: Response) => {
+router.post('/reviews/batch', async (req: Request, res: Response) => {
     if (!req.user) return res.status(401).json({ error: 'Not authorized' });
-    const { saleItemId, rating, comment } = req.body;
+    const { saleId, rating, comment } = req.body;
     const userId = req.user.phone;
 
-    if (!saleItemId || !rating) {
-        return res.status(400).json({ error: 'Sale item ID and rating are required.' });
+    if (!saleId || !rating) {
+        return res.status(400).json({ error: 'Sale ID and rating are required.' });
     }
 
     try {
-        // 1. Verify that the saleItem belongs to the user who is reviewing it.
-        const saleItem = await prisma.saleItem.findUnique({
-            where: { id: saleItemId },
-            include: { sale: true }
+        const sale = await prisma.sale.findUnique({
+            where: { id: saleId },
+            include: { items: true }
         });
 
-        if (!saleItem || saleItem.sale.userId !== userId) {
-            return res.status(403).json({ error: "You can only review items you've purchased." });
+        if (!sale || sale.userId !== userId) {
+            return res.status(403).json({ error: "You can only review sales you've made." });
         }
+        
+        // Create the main batch review first
+        const batchReview = await prisma.batchReview.create({
+            data: { rating, comment, userId, saleId: sale.id },
+        });
 
-        // 2. Create the review
-        const review = await prisma.review.create({
-            data: {
-                rating,
-                comment,
-                userId,
-                vegetableId: saleItem.vegetableId,
-                saleItemId: saleItem.id
+        let itemRatings = new Map<string, number>();
+
+        // If a comment exists, use AI to parse for specific ratings
+        if (comment && process.env.API_KEY) {
+            try {
+                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+                const itemNames = sale.items.map(i => i.vegetableName).join(', ');
+                const prompt = `Analyze user feedback on a vegetable delivery. The user gave an overall rating of ${rating}/5. The feedback is: "${comment}". The items in the order were: ${itemNames}.
+                
+                Your task is to determine a specific rating (1-5) for each vegetable based on the text.
+                Rules:
+                1. If a vegetable is praised (e.g. "good", "fresh", "badiya"), give it 5.
+                2. If a vegetable is criticized (e.g. "soft", "rotten", "bad", "naram"), give it 1 or 2.
+                3. If the review is mixed (e.g. "okay"), give it 3.
+                4. If a vegetable is NOT mentioned in the text, imply the Overall Rating (${rating}) for it.
+                
+                Respond ONLY with a valid JSON array of objects, with keys "vegetableName" (string) and "rating" (number). 
+                Example: [{"vegetableName": "Tomato", "rating": 2}, {"vegetableName": "Potato", "rating": 5}]`;
+
+                const response = await ai.models.generateContent({
+                    model: "gemini-2.5-flash",
+                    contents: prompt,
+                    config: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    vegetableName: { type: Type.STRING },
+                                    rating: { type: Type.NUMBER }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                if (response.text) {
+                    const specificRatings = JSON.parse(response.text.trim());
+                    for (const specific of specificRatings) {
+                        if (specific.vegetableName && typeof specific.rating === 'number') {
+                            itemRatings.set(specific.vegetableName.toLowerCase(), specific.rating);
+                        }
+                    }
+                    logger.info({ saleId, specificRatings }, "AI extracted specific ratings from comment.");
+                }
+            } catch (aiError) {
+                logger.error(aiError, "Gemini API call failed for batch review analysis.");
+                // Continue without specific ratings if AI fails
             }
-        });
-
-        res.status(201).json(review);
-    } catch (error: any) {
-        if (error.code === 'P2002') { // Unique constraint failed on saleItemId
-            return res.status(409).json({ error: "This item has already been reviewed." });
         }
-        logger.error(error, "Failed to submit review");
+
+        // Update each vegetable's aggregate rating
+        for (const item of sale.items) {
+            // Use specific rating if AI found one, otherwise use the batch rating
+            const specificRating = itemRatings.get(item.vegetableName.toLowerCase());
+            const ratingToApply = specificRating !== undefined ? specificRating : rating;
+
+            // Using raw query for atomic update to avoid race conditions
+            // This updates the running average: NewAvg = ((OldAvg * Count) + NewRating) / (Count + 1)
+            await prisma.$executeRaw`UPDATE "Vegetable" SET "averageRating" = (("averageRating" * "ratingCount" + ${ratingToApply}) / ("ratingCount" + 1)), "ratingCount" = "ratingCount" + 1 WHERE id = ${item.vegetableId}`;
+        }
+        
+        res.status(201).json(batchReview);
+        
+    } catch (error: any) {
+        if (error.code === 'P2002') { // Unique constraint failed on saleId
+            return res.status(409).json({ error: "This sale has already been reviewed." });
+        }
+        logger.error(error, "Failed to submit batch review");
         res.status(500).json({ error: 'Could not submit review.' });
     }
 });

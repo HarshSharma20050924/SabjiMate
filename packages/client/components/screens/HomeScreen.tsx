@@ -1,12 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { Language, Vegetable, OrderItem, ParsedOrderItem, User, BillEntry } from '../../../common/types';
 import { translations } from '../../../common/constants';
 import VegetableCard from '../VegetableCard';
 import LoadingSpinner from '../../../common/components/LoadingSpinner';
 import { sendDeliveryConfirmation, processAudioOrder, getBills } from '../../../common/api';
-import VegetableDetailModal from '../VegetableDetailModal';
 import { calculateItemPrice } from '@common/utils';
 import { useStore, AppState } from '../../store';
+
+const VegetableDetailModal = lazy(() => import('../VegetableDetailModal'));
 
 const ErrorIcon: React.FC<{className?: string}> = ({className}) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-16 w-16"} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
@@ -453,7 +454,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
               </>
         </div>
 
-      {modalVegetable && (<VegetableDetailModal vegetable={modalVegetable} language={language} onClose={() => setModalVegetable(null)} onQuantityChange={handleQuantityUpdate} initialQuantity={getQuantity(modalVegetable.id)} isLocked={isWishlistLocked} />)}
+      {modalVegetable && (
+          <Suspense fallback={<div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"><LoadingSpinner /></div>}>
+            <VegetableDetailModal vegetable={modalVegetable} language={language} onClose={() => setModalVegetable(null)} onQuantityChange={handleQuantityUpdate} initialQuantity={getQuantity(modalVegetable.id)} isLocked={isWishlistLocked} />
+          </Suspense>
+      )}
 
       {isConfirmBarVisible && (
         <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto p-3 bg-gray-50 border-t-2 border-green-500 shadow-2xl">

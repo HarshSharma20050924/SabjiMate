@@ -108,6 +108,11 @@ export const translations = {
     root: 'Root Veggies',
     fruit: 'Fruit Veggies',
     other: 'Other',
+    // Batch Rating
+    rateYourDelivery: 'How was everything today?',
+    rateYourDeliveryHi: 'आज सब कुछ कैसा था?',
+    deliveryFeedback: 'Your feedback helps us improve. Feel free to mention specific items! (e.g. "Tomatoes were great!")',
+    submit: 'Submit',
   },
   [Language.HI]: {
     appName: 'सब्ज़ीMATE',
@@ -215,5 +220,10 @@ export const translations = {
     root: 'जड़ वाली सब्ज़ियाँ',
     fruit: 'फल सब्ज़ियाँ',
     other: 'अन्य',
+    // Batch Rating
+    rateYourDelivery: 'How was everything today?',
+    rateYourDeliveryHi: 'आज सब कुछ कैसा था?',
+    deliveryFeedback: 'आपकी प्रतिक्रिया हमें बेहतर बनाने में मदद करती है। विशिष्ट वस्तुओं का उल्लेख करने के लिए स्वतंत्र महसूस करें! (जैसे "टमाटर बहुत अच्छे थे!")',
+    submit: 'Submit करें',
   },
 };

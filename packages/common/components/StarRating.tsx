@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 
 interface StarRatingProps {
@@ -39,7 +40,7 @@ const StarIcon: React.FC<{
 const StarRating: React.FC<StarRatingProps> = ({ rating, onRatingChange, count, size = 'md' }) => {
   const [hoverRating, setHoverRating] = useState(0);
 
-  const sizeClasses = { sm: 'w-5 h-5', md: 'w-6 h-6', lg: 'w-8 h-8' };
+  const sizeClasses = { sm: 'w-3 h-3', md: 'w-5 h-5', lg: 'w-8 h-8' };
   const sizeClass = sizeClasses[size];
 
   return (
@@ -53,7 +54,7 @@ const StarRating: React.FC<StarRatingProps> = ({ rating, onRatingChange, count, 
           return (
             <StarIcon
               key={star}
-              isFilled={star <= currentRatingForDisplay}
+              isFilled={star <= Math.round(currentRatingForDisplay)}
               onClick={onRatingChange ? () => onRatingChange(star) : undefined}
               onMouseEnter={onRatingChange ? () => setHoverRating(star) : undefined}
               sizeClass={sizeClass}
@@ -61,8 +62,8 @@ const StarRating: React.FC<StarRatingProps> = ({ rating, onRatingChange, count, 
           );
         })}
       </div>
-      {count != null && <span className="text-gray-500 text-xs ml-1.5">({count})</span>}
-      {!onRatingChange && rating > 0 && <span className="text-gray-800 font-bold text-xs ml-1.5">{rating.toFixed(1)}</span>}
+      {count != null && <span className="text-gray-400 text-[10px] ml-1">({count})</span>}
+      {!onRatingChange && rating > 0 && <span className="text-gray-600 font-bold text-[10px] ml-1">{rating.toFixed(1)}</span>}
     </div>
   );
 };

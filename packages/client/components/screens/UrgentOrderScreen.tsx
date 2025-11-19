@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Language, Vegetable, User, Coupon } from '../../../common/types';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Language, Vegetable, User, Coupon, Sale } from '../../../common/types';
 import { translations } from '../../../common/constants';
 import { getTodaysVegetables, placeUrgentOrder, verifyPayment, validateCoupon } from '../../../common/api';
 import LoadingSpinner from '../../../common/components/LoadingSpinner';
-import ConfirmationOverlay from '../../../common/components/ConfirmationOverlay';
+import L from 'leaflet';
 
 // --- ICONS ---
 const ErrorIcon: React.FC<{className?: string}> = ({className}) => (
@@ -62,21 +62,23 @@ const VegetableItemCard: React.FC<{
                     <span className="line-through">₹{veg.marketPrice}</span> <span className="text-green-600 font-semibold">₹{veg.price} / {veg.unit[language]}</span>
                 </p>
             </div>
-            <div className="mt-3">
-                {quantityInGrams > 0 ? (
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                            <button onClick={() => onQuantityChange(quantityInGrams - QUANTITY_STEP_G)} className="w-8 h-8 bg-gray-200 rounded-full font-bold text-lg">-</button>
-                            <span className="font-bold w-16 text-center">{formatGrams(quantityInGrams)}</span>
-                            <button onClick={() => onQuantityChange(quantityInGrams + QUANTITY_STEP_G)} className="w-8 h-8 bg-gray-200 rounded-full font-bold text-lg">+</button>
+            <div className="mt-3 h-20 flex flex-col justify-end">
+                <div className="w-full">
+                    {quantityInGrams > 0 ? (
+                        <div className="flex items-center justify-between flex-nowrap">
+                            <div className="flex items-center space-x-1">
+                                <button onClick={() => onQuantityChange(quantityInGrams - QUANTITY_STEP_G)} className="w-7 h-7 bg-gray-200 rounded-full font-bold text-md flex items-center justify-center flex-shrink-0">-</button>
+                                <span className="font-bold w-12 text-center text-sm">{formatGrams(quantityInGrams)}</span>
+                                <button onClick={() => onQuantityChange(quantityInGrams + QUANTITY_STEP_G)} className="w-7 h-7 bg-gray-200 rounded-full font-bold text-md flex items-center justify-center flex-shrink-0">+</button>
+                            </div>
+                            <span className="font-semibold text-green-700 text-md ml-2 flex-shrink-0">₹{itemPrice.toFixed(2)}</span>
                         </div>
-                        <span className="font-bold text-green-700 text-lg">₹{itemPrice.toFixed(2)}</span>
-                    </div>
-                ) : (
-                    <button onClick={() => onQuantityChange(QUANTITY_STEP_G)} className="w-full bg-green-100 text-green-700 font-bold py-2 rounded-lg hover:bg-green-200 transition-colors">
-                        Add
-                    </button>
-                )}
+                    ) : (
+                        <button onClick={() => onQuantityChange(QUANTITY_STEP_G)} className="w-full bg-green-100 text-green-700 font-bold py-2 rounded-lg hover:bg-green-200 transition-colors">
+                            Add
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -96,53 +98,57 @@ const ListView: React.FC<{
     onReview: () => void;
 }> = ({ t, fetchVeggies, isLoading, error, searchQuery, setSearchQuery, filteredVegetables, order, handleQuantityChange, itemCount, onReview }) => (
     <>
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 flex-shrink-0">
             <div className="flex items-center justify-center space-x-3">
                 <h2 className="text-2xl font-bold text-gray-800">{t.urgentOrderTitle}</h2>
                 <button onClick={fetchVeggies} disabled={isLoading} className="text-blue-600 hover:text-blue-800 disabled:text-gray-400"><RefreshIcon className={`w-6 h-6 ${isLoading ? 'animate-spin' : ''}`} /></button>
             </div>
             <p className="text-gray-600 mt-1">{t.urgentOrderDesc}</p>
         </div>
-        <div className="relative mb-6">
+        <div className="relative mb-6 flex-shrink-0">
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             <input type="text" placeholder={t.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full text-lg pl-12 pr-4 py-3 bg-white border-2 border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors" />
         </div>
-        {isLoading ? <LoadingSpinner /> : error ? (
-            <div className="text-center p-8 my-8 bg-gray-50 rounded-lg">
-                <div className="mx-auto w-16 h-16 text-red-500"><ErrorIcon /></div>
-                <h3 className="mt-4 text-xl font-semibold text-gray-800">Something Went Wrong</h3>
-                <p className="mt-2 text-gray-600">{error}</p>
-                <div className="mt-6">
-                    <button onClick={fetchVeggies} className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-green-700">
-                    Retry
-                    </button>
+        <div className="flex-grow overflow-y-auto pb-24">
+            {isLoading ? <LoadingSpinner /> : error ? (
+                <div className="text-center p-8 my-8 bg-gray-50 rounded-lg">
+                    <div className="mx-auto w-16 h-16 text-red-500"><ErrorIcon /></div>
+                    <h3 className="mt-4 text-xl font-semibold text-gray-800">Something Went Wrong</h3>
+                    <p className="mt-2 text-gray-600">{error}</p>
+                    <div className="mt-6">
+                        <button onClick={fetchVeggies} className="bg-green-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-green-700">
+                        Retry
+                        </button>
+                    </div>
                 </div>
+            ) : (
+                <>
+                    <div className="grid grid-cols-2 gap-4">
+                        {filteredVegetables.length > 0 ? filteredVegetables.map(veg => (
+                            <VegetableItemCard
+                                key={veg.id}
+                                veg={veg}
+                                quantityInGrams={order.get(veg.id) || 0}
+                                onQuantityChange={(grams) => handleQuantityChange(veg.id, grams)}
+                                language={Language.EN}
+                            />
+                        )) : (
+                            <div className="col-span-2 text-center p-8 my-8 bg-gray-50 rounded-lg">
+                                <div className="mx-auto w-16 h-16 text-gray-400"><EmptyIcon /></div>
+                                <h3 className="mt-4 text-xl font-semibold text-gray-800">{t.noVeggiesFound}</h3>
+                                <p className="mt-2 text-gray-600">No vegetables are available for urgent order right now.</p>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+        {itemCount > 0 && (
+             <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t border-gray-200 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
+                <button onClick={onReview} disabled={itemCount === 0} className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition-colors text-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    Review Order & Pay ({itemCount} {itemCount === 1 ? 'item' : 'items'})
+                </button>
             </div>
-        ) : (
-            <>
-                <div className="grid grid-cols-2 gap-4 pb-32">
-                    {filteredVegetables.length > 0 ? filteredVegetables.map(veg => (
-                        <VegetableItemCard
-                            key={veg.id}
-                            veg={veg}
-                            quantityInGrams={order.get(veg.id) || 0}
-                            onQuantityChange={(grams) => handleQuantityChange(veg.id, grams)}
-                            language={Language.EN}
-                        />
-                    )) : (
-                        <div className="col-span-2 text-center p-8 my-8 bg-gray-50 rounded-lg">
-                            <div className="mx-auto w-16 h-16 text-gray-400"><EmptyIcon /></div>
-                            <h3 className="mt-4 text-xl font-semibold text-gray-800">{t.noVeggiesFound}</h3>
-                            <p className="mt-2 text-gray-600">No vegetables are available for urgent order right now.</p>
-                        </div>
-                    )}
-                </div>
-                <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t">
-                    <button onClick={onReview} disabled={itemCount === 0} className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition-colors text-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
-                        Review Order & Pay ({itemCount} {itemCount === 1 ? 'item' : 'items'})
-                    </button>
-                </div>
-            </>
         )}
     </>
 );
@@ -164,12 +170,12 @@ const SummaryView: React.FC<{
     isPlacingOrder: boolean;
     handlePlaceOrder: () => void;
 }> = ({ t, onBack, orderItems, billDetails, couponInput, setCouponInput, appliedCoupon, couponError, isApplyingCoupon, handleApplyCoupon, handleRemoveCoupon, paymentMethod, setPaymentMethod, isPlacingOrder, handlePlaceOrder }) => (
-    <div className="animate-slide-in-right-fast">
-        <header className="flex items-center space-x-4 mb-6">
+    <div className="animate-slide-in-right-fast h-full flex flex-col">
+        <header className="flex-shrink-0 flex items-center space-x-4 mb-6">
             <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-100"><BackIcon className="w-6 h-6 text-gray-700"/></button>
             <h2 className="text-2xl font-bold text-gray-800">Order Summary</h2>
         </header>
-        <div className="space-y-4 pb-32">
+        <main className="flex-grow overflow-y-auto space-y-4 pr-2">
             <div className="bg-white p-4 rounded-lg shadow-md">
                 <h3 className="font-bold text-lg mb-2 border-b pb-2">Your Items</h3>
                 <ul className="space-y-2">
@@ -221,176 +227,292 @@ const SummaryView: React.FC<{
                     </button>
                 </div>
             </div>
-        </div>
-        <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto p-4 bg-white border-t">
+        </main>
+        <footer className="flex-shrink-0 pt-4">
             <button onClick={handlePlaceOrder} disabled={!paymentMethod || isPlacingOrder} className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md hover:bg-green-700 transition-colors text-lg disabled:bg-gray-400 disabled:cursor-not-allowed">
                 {isPlacingOrder ? t.loading : `Place Order (₹${billDetails.grandTotal.toFixed(2)})`}
             </button>
-        </div>
+        </footer>
     </div>
 );
 
-// --- Main Component ---
+// --- NEW ORDER STATUS VIEW ---
+const OrderStatusView: React.FC<{ order: Sale; user: User; onDone: () => void; }> = ({ order, user, onDone }) => {
+    const [step, setStep] = useState(1);
+    const [driverLocation, setDriverLocation] = useState<{ lat: number, lon: number } | null>(null);
+    const mapContainerRef = useRef<HTMLDivElement | null>(null);
+    const mapRef = useRef<L.Map | null>(null);
 
-const UrgentOrderScreen: React.FC<{ language: Language; user: User }> = ({ language, user }) => {
-    const t = translations[language];
-    const [view, setView] = useState<'list' | 'summary'>('list');
-    const [vegetables, setVegetables] = useState<Vegetable[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-    const [order, setOrder] = useState<Map<number, number>>(new Map()); // vegId -> quantity in grams
-    const [confirmation, setConfirmation] = useState({ show: false, message: '' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'COD' | null>(null);
-    const [couponInput, setCouponInput] = useState('');
-    const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
-    const [couponError, setCouponError] = useState('');
-    const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-
-    const fetchVeggies = useCallback(async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
-            const veggiesData = await getTodaysVegetables(user.city);
-            setVegetables(veggiesData);
-        } catch (error) { 
-            console.error("Failed to fetch vegetables:", error);
-            setError("Could not load available vegetables. Please try again.");
-        }
-        finally { setIsLoading(false); }
-    }, [user.city]);
-
-    useEffect(() => { fetchVeggies(); }, [fetchVeggies]);
+    const steps = [
+        { title: 'Order Placed', details: 'We have received your order.' },
+        { title: 'Assigning Driver', details: 'Finding the best delivery partner for you.' },
+        { title: 'Driver Assigned', details: 'Ramesh is on his way!' },
+        { title: 'Out for Delivery', details: 'Your vegetables are arriving soon.' },
+        { title: 'Delivered', details: 'Enjoy your fresh vegetables!' },
+    ];
     
-    const handleQuantityChange = (vegId: number, grams: number) => {
-        setOrder(prev => {
-            const newOrder = new Map(prev);
-            if (grams > 0) {
-                newOrder.set(vegId, grams);
-            } else {
-                newOrder.delete(vegId);
-            }
-            return newOrder;
-        });
-    };
+    useEffect(() => {
+        const timeouts = [
+            setTimeout(() => setStep(2), 2000),
+            setTimeout(() => setStep(3), 6000),
+            setTimeout(() => setStep(4), 8000),
+        ];
+        return () => timeouts.forEach(clearTimeout);
+    }, []);
 
-    const orderItems = useMemo(() => Array.from(order.entries()).map(([vegId, quantityInGrams]) => ({
-        veg: vegetables.find(v => v.id === vegId)!,
-        quantityInGrams
-    })).filter(item => item.veg), [order, vegetables]);
+    useEffect(() => {
+        if (step >= 4 && user.latitude && user.longitude) {
+            const startLat = user.latitude + 0.02; // Start ~2.2km North
+            const startLon = user.longitude;
+            setDriverLocation({ lat: startLat, lon: startLon });
 
-    const billDetails = useMemo(() => {
-        const subtotal = orderItems.reduce((total, item) => total + calculatePrice(item.veg.price, item.quantityInGrams), 0);
-        let discount = 0;
-        if (appliedCoupon) {
-            if (!appliedCoupon.minOrderValue || subtotal >= appliedCoupon.minOrderValue) {
-                discount = appliedCoupon.discountType === 'PERCENTAGE' ? subtotal * (appliedCoupon.discountValue / 100) : appliedCoupon.discountValue;
-                discount = Math.min(discount, subtotal);
-            }
+            const interval = setInterval(() => {
+                setDriverLocation(prev => {
+                    if (!prev) return null;
+                    const newLat = prev.lat - 0.0002; // Move South
+                    if (newLat <= user.latitude!) {
+                        clearInterval(interval);
+                        setStep(5);
+                        return { lat: user.latitude!, lon: user.longitude! };
+                    }
+                    return { lat: newLat, lon: prev.lon };
+                });
+            }, 1000);
+            return () => clearInterval(interval);
         }
-        const totalAfterDiscount = subtotal - discount;
-        const gst = (totalAfterDiscount + DELIVERY_CHARGE) * GST_RATE;
-        const grandTotal = totalAfterDiscount + DELIVERY_CHARGE + gst;
-        return { subtotal, deliveryCharge: DELIVERY_CHARGE, gst, grandTotal, discount };
-    }, [orderItems, appliedCoupon]);
-
-    const handleApplyCoupon = async () => {
-        if (!couponInput.trim()) return;
-        setIsApplyingCoupon(true);
-        setCouponError('');
-        try {
-            const coupon = await validateCoupon(couponInput.toUpperCase());
-            if (coupon.minOrderValue && billDetails.subtotal < coupon.minOrderValue) {
-                throw new Error(`Minimum order of ₹${coupon.minOrderValue} required.`);
-            }
-            setAppliedCoupon(coupon);
-            setCouponInput('');
-        } catch (err: any) { setCouponError(err.message); setAppliedCoupon(null); }
-        finally { setIsApplyingCoupon(false); }
-    };
-
-    const handleRemoveCoupon = () => { setAppliedCoupon(null); setCouponError(''); };
-
-    const handlePlaceOrder = async () => {
-        if (!paymentMethod) { alert("Please select a payment method."); return; }
-        setIsPlacingOrder(true);
-        const orderPayload = orderItems.map(item => ({
-            vegetableId: item.veg.id,
-            vegetableName: item.veg.name[language],
-            quantity: formatGrams(item.quantityInGrams),
-            price: calculatePrice(item.veg.price, item.quantityInGrams),
-        }));
-        try {
-            const commonPayload = [orderPayload, billDetails.grandTotal, paymentMethod, appliedCoupon?.code] as const;
-            if (paymentMethod === 'COD') {
-                await placeUrgentOrder(...commonPayload);
-                setConfirmation({ show: true, message: 'Order Placed! Pay on delivery.' });
-                setOrder(new Map()); setView('list');
-            } else {
-                const { sale, razorpayOrder, keyId } = await placeUrgentOrder(...commonPayload);
-                const options = {
-                    key: keyId, amount: razorpayOrder.amount, currency: razorpayOrder.currency, name: "सब्ज़ीMATE",
-                    description: "Urgent Order Payment", order_id: razorpayOrder.id,
-                    handler: async (response: any) => {
-                        try {
-                            await verifyPayment({ ...response }, sale.id);
-                            setConfirmation({ show: true, message: t.paymentSuccess });
-                            setOrder(new Map()); setView('list');
-                        } catch { alert("Payment verification failed. Please contact support."); }
-                    },
-                    prefill: { name: user.name, contact: user.phone }, theme: { color: "#059669" },
-                };
-                new (window as any).Razorpay(options).open();
-            }
-        } catch (error) { alert((error as Error).message || 'Failed to place order.'); }
-        finally { setIsPlacingOrder(false); }
-    };
+    }, [step, user.latitude, user.longitude]);
     
-    const filteredVegetables = useMemo(() => vegetables.filter(veg =>
-        searchQuery === '' ||
-        veg.name[Language.EN].toLowerCase().includes(searchQuery.toLowerCase()) ||
-        veg.name[Language.HI].includes(searchQuery)
-    ), [vegetables, searchQuery]);
+    useEffect(() => {
+        if (mapContainerRef.current && !mapRef.current && driverLocation && user.latitude && user.longitude) {
+            mapRef.current = L.map(mapContainerRef.current).setView([driverLocation.lat, driverLocation.lon], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapRef.current);
+        }
+    }, [driverLocation, user.latitude, user.longitude]);
+
+    useEffect(() => {
+        if (mapRef.current && driverLocation && user.latitude && user.longitude) {
+            mapRef.current.eachLayer(layer => { if (layer instanceof L.Marker) mapRef.current?.removeLayer(layer); });
+            const homeIcon = L.divIcon({ className: 'home-icon', html: '🏠', iconSize: [24, 24] });
+            const driverIcon = L.divIcon({ className: 'driver-icon', html: '🚚', iconSize: [24, 24] });
+            L.marker([user.latitude, user.longitude], { icon: homeIcon }).addTo(mapRef.current);
+            L.marker([driverLocation.lat, driverLocation.lon], { icon: driverIcon }).addTo(mapRef.current);
+            mapRef.current.panTo([driverLocation.lat, driverLocation.lon]);
+        }
+    }, [driverLocation, user.latitude, user.longitude]);
 
     return (
-        <div className="p-4">
-            <ConfirmationOverlay show={confirmation.show} message={confirmation.message} onClose={() => setConfirmation({ show: false, message: '' })} />
-            {view === 'list' ? (
-                <ListView
-                    t={t}
-                    fetchVeggies={fetchVeggies}
-                    isLoading={isLoading}
-                    error={error}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    filteredVegetables={filteredVegetables}
-                    order={order}
-                    handleQuantityChange={handleQuantityChange}
-                    itemCount={order.size}
-                    onReview={() => setView('summary')}
-                />
-            ) : (
-                <SummaryView
-                    t={t}
-                    onBack={() => setView('list')}
-                    orderItems={orderItems}
-                    billDetails={billDetails}
-                    couponInput={couponInput}
-                    setCouponInput={setCouponInput}
-                    appliedCoupon={appliedCoupon}
-                    couponError={couponError}
-                    isApplyingCoupon={isApplyingCoupon}
-                    handleApplyCoupon={handleApplyCoupon}
-                    handleRemoveCoupon={handleRemoveCoupon}
-                    paymentMethod={paymentMethod}
-                    setPaymentMethod={setPaymentMethod}
-                    isPlacingOrder={isPlacingOrder}
-                    handlePlaceOrder={handlePlaceOrder}
-                />
+        <div className="p-4 animate-zoom-in flex flex-col h-full">
+            <h2 className="text-2xl font-bold text-gray-800 text-center mb-6">Order Status</h2>
+            <div className="flex-grow space-y-4">
+                {steps.map((s, index) => (
+                    <div key={index} className={`flex items-start space-x-4 transition-opacity duration-500 ${step > index ? 'opacity-100' : 'opacity-30'}`}>
+                        <div className="flex flex-col items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step > index ? 'bg-green-600' : 'bg-gray-300'}`}>
+                                {step > index + 1 || (step === index + 1 && index === 4) ? <span className="text-white font-bold">✓</span> : <span className="text-white font-bold">{index + 1}</span>}
+                            </div>
+                            {index < steps.length - 1 && <div className={`w-0.5 h-16 mt-1 ${step > index + 1 ? 'bg-green-600' : 'bg-gray-300'}`}></div>}
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg">{s.title}</h3>
+                            <p className="text-gray-600">{s.details}</p>
+                            {index === 1 && step === 2 && <div className="mt-2"><LoadingSpinner/></div>}
+                        </div>
+                    </div>
+                ))}
+            </div>
+            {step >= 4 && (
+                <div className="my-4">
+                    <div ref={mapContainerRef} className="w-full h-48 rounded-lg shadow-md border"></div>
+                </div>
             )}
+            <div className="flex-shrink-0 pt-4">
+                <button onClick={onDone} className="w-full bg-green-600 text-white font-bold py-3 rounded-lg shadow-md">Done</button>
+            </div>
         </div>
     );
+};
+
+
+// --- MAIN COMPONENT ---
+interface UrgentOrderScreenProps {
+  language: Language;
+  user: User;
+}
+
+const UrgentOrderScreen: React.FC<UrgentOrderScreenProps> = ({ language, user }) => {
+  const t = translations[language];
+  
+  const [view, setView] = useState<'list' | 'summary' | 'status'>('list');
+  const [vegetables, setVegetables] = useState<Vegetable[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [order, setOrder] = useState<Map<number, number>>(new Map());
+
+  // Summary State
+  const [couponInput, setCouponInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'COD' | null>(null);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
+  // Status State
+  const [confirmedOrder, setConfirmedOrder] = useState<Sale | null>(null);
+
+  const fetchVeggies = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const veggiesData = await getTodaysVegetables(user.city);
+      setVegetables(veggiesData);
+    } catch (error) {
+      console.error("Failed to fetch vegetables:", error);
+      setError("Could not load vegetables. Please check your connection and try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user.city]);
+
+  useEffect(() => {
+    fetchVeggies();
+  }, [fetchVeggies]);
+
+  const handleQuantityChange = (vegId: number, grams: number) => {
+    setOrder(prev => {
+      const newOrder = new Map(prev);
+      if (grams > 0) newOrder.set(vegId, grams);
+      else newOrder.delete(vegId);
+      return newOrder;
+    });
+  };
+
+  const filteredVegetables = useMemo(() =>
+    vegetables.filter(veg =>
+      veg.name[language].toLowerCase().includes(searchQuery.toLowerCase()) ||
+      veg.name[Language.HI].includes(searchQuery)
+    ), [vegetables, searchQuery, language]);
+    
+  const orderItems = useMemo(() =>
+    Array.from(order.entries()).map(([vegId, quantityInGrams]) => {
+        const veg = vegetables.find(v => v.id === vegId);
+        return { veg, quantityInGrams };
+    }).filter(item => item.veg) as { veg: Vegetable; quantityInGrams: number }[],
+  [order, vegetables]);
+  
+  const billDetails = useMemo(() => {
+      const subtotal = orderItems.reduce((acc, item) => acc + calculatePrice(item.veg.price, item.quantityInGrams), 0);
+      let discount = 0;
+      if (appliedCoupon) {
+          if (appliedCoupon.discountType === 'PERCENTAGE') discount = subtotal * (appliedCoupon.discountValue / 100);
+          else discount = appliedCoupon.discountValue;
+          discount = Math.min(discount, subtotal);
+      }
+      const totalAfterDiscount = subtotal - discount;
+      const gst = (totalAfterDiscount + DELIVERY_CHARGE) * GST_RATE;
+      const grandTotal = totalAfterDiscount + DELIVERY_CHARGE + gst;
+      return { subtotal, deliveryCharge: DELIVERY_CHARGE, gst, grandTotal, discount };
+  }, [orderItems, appliedCoupon]);
+
+  const handleApplyCoupon = async () => {
+      if (!couponInput) return;
+      setIsApplyingCoupon(true);
+      setCouponError('');
+      try {
+          const coupon = await validateCoupon(couponInput);
+          if (coupon.minOrderValue && billDetails.subtotal < coupon.minOrderValue) {
+               setCouponError(`Minimum order of ₹${coupon.minOrderValue} required.`);
+               return;
+          }
+          setAppliedCoupon(coupon);
+      } catch (err: any) {
+          setCouponError(err.message || "Invalid coupon code.");
+      } finally {
+          setIsApplyingCoupon(false);
+      }
+  };
+  
+  const handleRemoveCoupon = () => {
+      setAppliedCoupon(null);
+      setCouponInput('');
+  };
+
+  const handlePlaceOrder = async () => {
+      if (!paymentMethod) return;
+      setIsPlacingOrder(true);
+      const itemsPayload = orderItems.map(item => ({
+          vegetableId: item.veg.id,
+          vegetableName: item.veg.name[Language.EN],
+          quantity: formatGrams(item.quantityInGrams),
+          price: calculatePrice(item.veg.price, item.quantityInGrams)
+      }));
+
+      try {
+          const result = await placeUrgentOrder(itemsPayload, billDetails.grandTotal, paymentMethod, appliedCoupon?.code);
+          if (paymentMethod === 'COD') {
+              setConfirmedOrder(result.sale);
+              setView('status');
+          } else if (paymentMethod === 'ONLINE' && result.razorpayOrder) {
+                const options = {
+                    key: result.keyId,
+                    amount: result.razorpayOrder.amount,
+                    currency: result.razorpayOrder.currency,
+                    name: "सब्ज़ीMATE",
+                    description: "Urgent Order Payment",
+                    order_id: result.razorpayOrder.id,
+                    handler: async (response: any) => {
+                        await verifyPayment({ ...response, saleId: result.sale.id });
+                        setConfirmedOrder(result.sale);
+                        setView('status');
+                    },
+                    prefill: { name: user.name, contact: user.phone },
+                    theme: { color: "#059669" },
+                };
+                const rzp = new (window as any).Razorpay(options);
+                rzp.open();
+                rzp.on('payment.failed', () => alert('Payment failed. Please try again.'));
+          }
+      } catch (err: any) {
+          alert(`Order failed: ${err.message}`);
+      } finally {
+          setIsPlacingOrder(false);
+      }
+  };
+  
+  const handleDone = () => {
+      setOrder(new Map());
+      setAppliedCoupon(null);
+      setCouponInput('');
+      setPaymentMethod(null);
+      setConfirmedOrder(null);
+      setView('list');
+  };
+
+  const renderContent = () => {
+    switch (view) {
+        case 'list': return <ListView 
+            t={t} fetchVeggies={fetchVeggies} isLoading={isLoading} error={error}
+            searchQuery={searchQuery} setSearchQuery={setSearchQuery} filteredVegetables={filteredVegetables}
+            order={order} handleQuantityChange={handleQuantityChange} itemCount={orderItems.length}
+            onReview={() => setView('summary')}
+        />;
+        case 'summary': return <SummaryView 
+            t={t} onBack={() => setView('list')} orderItems={orderItems} billDetails={billDetails}
+            couponInput={couponInput} setCouponInput={setCouponInput} appliedCoupon={appliedCoupon}
+            couponError={couponError} isApplyingCoupon={isApplyingCoupon} handleApplyCoupon={handleApplyCoupon}
+            handleRemoveCoupon={handleRemoveCoupon} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod}
+            isPlacingOrder={isPlacingOrder} handlePlaceOrder={handlePlaceOrder}
+        />;
+        case 'status': return <OrderStatusView order={confirmedOrder!} user={user} onDone={handleDone} />;
+        default: return null;
+    }
+  };
+
+  return (
+    <div className="p-4 h-full flex flex-col">
+        {renderContent()}
+    </div>
+  );
 };
 
 export default UrgentOrderScreen;

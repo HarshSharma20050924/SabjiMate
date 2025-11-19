@@ -3,7 +3,6 @@ import { Language, BillEntry, User, OrderItem } from '@common/types';
 import { translations } from '@common/constants';
 import { getBills, getTodaysVegetables } from '@common/api';
 import LoadingSpinner from '@common/components/LoadingSpinner';
-import RatingModal from '../RatingModal';
 import StarRating from '@common/components/StarRating';
 
 const ErrorIcon: React.FC<{className?: string}> = ({className}) => (
@@ -33,10 +32,9 @@ interface HistoryBillItemProps {
     bill: BillEntry; 
     onReorder: (bill: BillEntry) => void; 
     language: Language;
-    onRateItem: (saleItemId: number, vegetableId: number, vegetableName: string) => void;
 }
 
-const HistoryBillItem: React.FC<HistoryBillItemProps> = ({ bill, onReorder, language, onRateItem }) => {
+const HistoryBillItem: React.FC<HistoryBillItemProps> = ({ bill, onReorder, language }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const t = translations[language];
 
@@ -51,9 +49,12 @@ const HistoryBillItem: React.FC<HistoryBillItemProps> = ({ bill, onReorder, lang
         </div>
         <div className="flex justify-between items-center mt-2">
             <span className="font-bold text-lg text-gray-800">Total: ₹{bill.total.toFixed(2)}</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+            <div className="flex items-center space-x-2">
+                {bill.batchReview && <StarRating rating={bill.batchReview.rating} size="sm" />}
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+            </div>
         </div>
       </button>
       {isExpanded && (
@@ -62,19 +63,7 @@ const HistoryBillItem: React.FC<HistoryBillItemProps> = ({ bill, onReorder, lang
             {bill.items.map((item, index) => (
                 <div key={index} className="flex justify-between items-center text-sm text-gray-600 py-1">
                     <span>{item.name} (x{String(item.quantity)})</span>
-                    <div className="flex items-center space-x-2">
-                      <span>₹{item.price.toFixed(2)}</span>
-                      {item.rating ? (
-                          <StarRating rating={item.rating} size="sm" />
-                      ) : (
-                          <button
-                              onClick={() => onRateItem(item.id, item.vegetableId, item.name)}
-                              className="text-xs font-semibold text-blue-600 hover:underline px-2 py-1 rounded hover:bg-blue-50"
-                          >
-                              Rate
-                          </button>
-                      )}
-                    </div>
+                    <span>₹{item.price.toFixed(2)}</span>
                 </div>
             ))}
             </div>
@@ -96,11 +85,6 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ language, user, onReorder
   const [bills, setBills] = useState<BillEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [ratingModalState, setRatingModalState] = useState<{
-    show: boolean;
-    saleItemId: number | null;
-    vegetableName: string | null;
-  }>({ show: false, saleItemId: null, vegetableName: null });
 
   const fetchBills = useCallback(async () => {
     try {
@@ -119,18 +103,6 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ language, user, onReorder
   useEffect(() => {
     fetchBills();
   }, [fetchBills]);
-  
-    const handleRateItem = (saleItemId: number, vegetableId: number, vegetableName: string) => {
-        setRatingModalState({ show: true, saleItemId, vegetableName });
-    };
-
-    const handleCloseRatingModal = () => {
-        setRatingModalState({ show: false, saleItemId: null, vegetableName: null });
-    };
-
-    const handleSubmitRatingSuccess = () => {
-        fetchBills(); // Refresh the data to show the new rating
-    };
 
   const handleReorder = async (bill: BillEntry) => {
       try {
@@ -180,7 +152,6 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ language, user, onReorder
                         bill={bill} 
                         onReorder={handleReorder} 
                         language={language}
-                        onRateItem={handleRateItem}
                     />
                 ))}
             </div>
@@ -190,7 +161,7 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ language, user, onReorder
     return (
         <div className="text-center p-8 my-8 bg-gray-50 rounded-lg">
             <div className="mx-auto w-16 h-16 text-gray-400"><EmptyIcon /></div>
-            <h3 className="mt-4 text-xl font-semibold text-gray-800">No Past Orders</h3>
+            <h3 className="mt-4 text-xl font-semibold text-gray-700">No Past Orders</h3>
             <p className="mt-2 text-gray-500">You haven't placed any orders yet. Your history will show up here.</p>
         </div>
     );
@@ -205,15 +176,6 @@ const HistoryScreen: React.FC<HistoryScreenProps> = ({ language, user, onReorder
       
       {renderContent()}
 
-       {ratingModalState.show && (
-          <RatingModal
-            show={ratingModalState.show}
-            onClose={handleCloseRatingModal}
-            onSubmitSuccess={handleSubmitRatingSuccess}
-            saleItemId={ratingModalState.saleItemId!}
-            vegetableName={ratingModalState.vegetableName!}
-          />
-      )}
     </div>
   );
 };

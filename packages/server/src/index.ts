@@ -1,4 +1,5 @@
 
+
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import cors from 'cors';
@@ -16,6 +17,7 @@ import paymentRoutes from './routes/payments'; // New payment routes
 import notificationRoutes from './routes/notifications'; // Import new notification routes
 import { initializeDefaultAdmin } from './services/user';
 import { initializeWebSocket } from './websocket';
+import { configurePush } from './services/notifications';
 
 const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
 const envPath = path.resolve(__dirname, `../../../${envFile}`);
@@ -36,6 +38,9 @@ const server = http.createServer(app);
 
 // Initialize the WebSocket server and attach it to the HTTP server.
 initializeWebSocket(server);
+
+// Initialize the Web Push service.
+configurePush();
 
 // --- Express Middleware ---
 app.use(cors({

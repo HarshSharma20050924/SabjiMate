@@ -16,6 +16,25 @@ const ErrorIcon: React.FC = () => (
     </svg>
 );
 
+const AccessDeniedScreen: React.FC<{ logout: () => void; role: string | null | undefined }> = ({ logout, role }) => (
+    <div className="h-screen flex flex-col items-center justify-center p-6 text-center bg-gray-50">
+        <div className="text-red-500 mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+        </div>
+        <h2 className="text-2xl font-bold text-gray-800">Access Denied</h2>
+        <p className="mt-2 text-gray-600">
+            You are logged in as a{role === 'ADMIN' ? 'n' : ''} <span className="font-semibold">{role}</span>.
+            Please use the appropriate portal for your role.
+        </p>
+        <button
+            onClick={logout}
+            className="mt-6 bg-red-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-red-700"
+        >
+            Logout
+        </button>
+    </div>
+);
+
 
 const App: React.FC = () => {
   const [language, setLanguage] = useState<Language>(Language.EN);
@@ -116,6 +135,11 @@ const App: React.FC = () => {
     }
     
     if (auth.user) {
+       // Role check to prevent admin/driver from using the client app
+       if (auth.user.role !== 'USER') {
+           return <AccessDeniedScreen logout={auth.logout} role={auth.user.role} />;
+       }
+
        const isProfileComplete = auth.user.address && auth.user.city && auth.user.state && auth.user.name && !auth.user.name.startsWith('User ');
        
        if (!isProfileComplete) {

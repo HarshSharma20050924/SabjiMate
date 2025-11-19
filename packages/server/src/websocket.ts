@@ -3,8 +3,15 @@ import http, { IncomingMessage } from 'http';
 import logger from './logger';
 import prisma from './db';
 import { sendNotification } from './services/notifications';
+import IORedis from 'ioredis';
 
 let wss: WebSocketServer;
+const redisClient = new IORedis(process.env.REDIS_URL || 'redis://127.0.0.1:6379');
+
+// Map to store driverId -> WebSocket connection for targeted messaging
+export const driverConnections = new Map<string, WebSocket>();
+// Map to store userId -> WebSocket connection for targeted messaging
+export const userConnections = new Map<string, WebSocket>();
 
 // A simple in-memory set to track which drivers have already triggered the notification today.
 // In a multi-server setup, this should be moved to a shared store like Redis.
@@ -28,32 +35,70 @@ export const initializeWebSocket = (server: http.Server) => {
 
     wss.on('connection', (ws) => {
         logger.info('Client connected to WebSocket on /socket');
+        let driverId: string | null = null; // Scope driverId to this connection
+        let userId: string | null = null; // Scope userId to this connection
         
         ws.on('message', async (message) => {
             try {
                 const data = JSON.parse(message.toString());
+                
+                // When a regular user identifies themselves
+                if (data.type === 'identify_user' && data.payload.userId) {
+                    userId = data.payload.userId;
+                    userConnections.set(userId!, ws);
+                    logger.info(`User ${userId} identified and connected.`);
+                }
 
+                // When a driver goes "online"
                 if (data.type === 'start_broadcast' && data.driverId) {
-                    // Only send notifications once per driver per day.
+                    driverId = data.driverId;
+                    driverConnections.set(driverId!, ws);
+                    await redisClient.sadd('available_drivers', driverId!);
+                    logger.info(`Driver ${driverId} connected and is broadcasting.`);
+
                     if (!notifiedDriversToday.has(data.driverId)) {
                         notifiedDriversToday.add(data.driverId);
-                        logger.info(`Driver ${data.driverId} started broadcasting. Triggering notifications.`);
+                        logger.info(`Triggering "on the way" notifications as driver ${data.driverId} is starting their day.`);
                         await notifyConfirmedUsers();
                     }
                 }
                 
+                // When a driver's location is updated
                 if (data.type === 'driver_location_update') {
-                    broadcast({
-                        type: 'truck_location_broadcast',
-                        payload: data.payload
-                    });
+                    const { lat, lon, driverId: dId } = data.payload;
+                    if (dId && lat && lon) {
+                        // Store location in Redis Geo set for proximity searches
+                        await redisClient.geoadd('drivers_locations', lon, lat, dId);
+                    }
+                    // Broadcast location to all clients (for admin/user maps)
+                    broadcast({ type: 'truck_location_broadcast', payload: data.payload });
                 }
+
+                // When a driver accepts an order
+                if (data.type === 'accept_order') {
+                    if (driverId) {
+                         logger.info(`Driver ${driverId} accepted order ${data.payload.orderId}`);
+                        // Notify all clients (especially admins) that the order has been claimed
+                        broadcast({ type: 'order_accepted_by_driver', payload: { orderId: data.payload.orderId, driverId } });
+                    }
+                }
+
             } catch (e) {
                 logger.error(e, 'Error parsing WebSocket message');
             }
         });
 
-        ws.on('close', () => {
+        ws.on('close', async () => {
+            if (driverId) {
+                driverConnections.delete(driverId);
+                await redisClient.srem('available_drivers', driverId); // Remove from available set
+                await redisClient.zrem('drivers_locations', driverId); // Remove from geo set
+                logger.info(`Driver ${driverId} disconnected.`);
+            }
+            if (userId) {
+                userConnections.delete(userId);
+                logger.info(`User ${userId} disconnected.`);
+            }
             logger.info('Client disconnected from /socket');
         });
     });

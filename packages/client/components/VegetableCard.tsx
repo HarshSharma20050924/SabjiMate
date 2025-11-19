@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Vegetable, Language } from '@common/types';
 import { calculateItemPrice } from '@common/utils';
@@ -91,11 +92,11 @@ const VegetableCard: React.FC<VegetableCardProps> = ({ vegetable, language, onCl
       <div className="p-3 flex-grow flex flex-col justify-between">
         <div>
           <h3 className="text-md font-bold text-gray-800 truncate">{vegetable.name[language]}</h3>
-           <div className="flex items-center space-x-2 mt-1">
+           <div className="flex items-center space-x-2 mt-1 h-4">
                 {vegetable.averageRating && vegetable.ratingCount ? (
                     <StarRating rating={vegetable.averageRating} count={vegetable.ratingCount} size="sm" />
                 ) : (
-                    <div className="h-5" /> 
+                    <span className="text-xs text-gray-400">No ratings</span> 
                 )}
            </div>
           <div className="flex items-baseline space-x-2 mt-1">

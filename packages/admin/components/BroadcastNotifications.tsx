@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { broadcastNotification } from '@common/api';
 
@@ -20,8 +21,15 @@ const BroadcastNotifications: React.FC = () => {
         setSuccessMessage('');
 
         try {
-            const { count } = await broadcastNotification(title, body);
-            setSuccessMessage(`Broadcast sent successfully to ${count} subscribers!`);
+            // The API now returns detailed stats: { success: true, count: number, failed: number, total: number }
+            const result = await broadcastNotification(title, body) as any;
+            
+            if (result.total === 0) {
+                 setError('No active subscribers found. Ask users to enable notifications in their app settings.');
+            } else {
+                 setSuccessMessage(`Broadcast sent! Success: ${result.count}, Failed: ${result.failed || 0}`);
+            }
+            
             setTitle('');
             setBody('');
         } catch (err: any) {
@@ -70,8 +78,8 @@ const BroadcastNotifications: React.FC = () => {
                     />
                 </div>
                 
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                {successMessage && <p className="text-sm text-green-600">{successMessage}</p>}
+                {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded border border-red-200">{error}</p>}
+                {successMessage && <p className="text-sm text-green-600 font-semibold bg-green-50 p-2 rounded border border-green-200">{successMessage}</p>}
 
                 <div className="text-right">
                     <button

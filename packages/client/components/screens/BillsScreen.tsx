@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Language, BillEntry, User, OrderItem } from '../../../common/types';
 import { translations } from '../../../common/constants';
 import { getBills, createPaymentOrder, verifyPayment, getTodaysVegetables } from '../../../common/api';
 import LoadingSpinner from '../../../common/components/LoadingSpinner';
 import ConfirmationOverlay from '../../../common/components/ConfirmationOverlay';
-import RatingModal from '../RatingModal';
 import StarRating from '../../../common/components/StarRating';
+
+const BatchRatingModal = lazy(() => import('../BatchRatingModal'));
 
 const ErrorIcon: React.FC<{className?: string}> = ({className}) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-16 w-16"} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
@@ -36,8 +38,7 @@ const ExpandableBillItem: React.FC<{
     bill: BillEntry; 
     onReorderClick: (bill: BillEntry) => void; 
     language: Language;
-    onRateItem: (saleItemId: number, vegetableId: number, vegetableName: string) => void;
-}> = ({ bill, onReorderClick, language, onRateItem }) => {
+}> = ({ bill, onReorderClick, language }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const t = translations[language];
 
@@ -52,30 +53,21 @@ const ExpandableBillItem: React.FC<{
         </div>
         <div className="flex justify-between items-center mt-2">
             <span className="font-bold text-lg text-gray-800">Total: ₹{bill.total.toFixed(2)}</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
+             <div className="flex items-center space-x-2">
+                {bill.batchReview && <StarRating rating={bill.batchReview.rating} size="sm" />}
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+            </div>
         </div>
       </button>
       {isExpanded && (
         <div className="px-4 pb-4 animate-zoom-in" style={{animationDuration: '0.3s'}}>
             <div className="mt-2 border-t pt-2 space-y-2">
-            {bill.items.map((item, index) => (
+            {bill.items.map((item) => (
                 <div key={item.id} className="flex justify-between items-center text-sm text-gray-600 py-1">
                     <span>{item.name} (x{String(item.quantity)})</span>
-                    <div className="flex items-center space-x-2">
-                      <span>₹{item.price.toFixed(2)}</span>
-                      {item.rating ? (
-                          <StarRating rating={item.rating} size="sm" />
-                      ) : (
-                          <button
-                              onClick={(e) => { e.stopPropagation(); onRateItem(item.id, item.vegetableId, item.name); }}
-                              className="text-xs font-semibold text-blue-600 hover:underline px-2 py-1 rounded hover:bg-blue-50"
-                          >
-                              Rate
-                          </button>
-                      )}
-                    </div>
+                    <span>₹{item.price.toFixed(2)}</span>
                 </div>
             ))}
             </div>
@@ -101,7 +93,7 @@ const LiveDeliveryBanner: React.FC<{onClick: () => void}> = ({ onClick }) => (
         <p className="font-semibold text-sm">A delivery is on the way!</p>
         <span className="font-bold text-sm flex items-center">
             Track now 
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
         </span>
@@ -117,19 +109,28 @@ const BillsScreen: React.FC<BillsScreenProps> = ({ language, user, isTruckLive, 
   const [isPaying, setIsPaying] = useState(false);
   const [confirmation, setConfirmation] = useState({ show: false, message: '' });
   const [cashRecorded, setCashRecorded] = useState(false);
-  const [ratingModalState, setRatingModalState] = useState<{
-    show: boolean;
-    saleItemId: number | null;
-    vegetableId: number | null;
-    vegetableName: string | null;
-  }>({ show: false, saleItemId: null, vegetableId: null, vegetableName: null });
+  const [ratingModalSaleId, setRatingModalSaleId] = useState<number | null>(null);
 
   const fetchBills = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       const billsData = await getBills(user);
-      setBills(billsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      const sortedBills = billsData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setBills(sortedBills);
+
+      // Check if the latest bill needs a rating
+      if (sortedBills.length > 0) {
+        const latestBill = sortedBills[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const dismissedKey = `rating-dismissed-${latestBill.id}`;
+
+        // Only show if: same day, no review yet, and NOT dismissed in this session
+        if (latestBill.date === todayStr && !latestBill.batchReview && !sessionStorage.getItem(dismissedKey)) {
+          setRatingModalSaleId(latestBill.id);
+        }
+      }
+
     } catch(error) {
       console.error("Failed to fetch bills:", error);
       setError("We couldn't load your order history. Please try again.");
@@ -193,17 +194,19 @@ const BillsScreen: React.FC<BillsScreenProps> = ({ language, user, isTruckLive, 
       fetchBills(); // Refetch bills after the confirmation overlay closes
   };
 
-  const handleRateItem = (saleItemId: number, vegetableId: number, vegetableName: string) => {
-    setRatingModalState({ show: true, saleItemId, vegetableId, vegetableName });
-  };
-
   const handleCloseRatingModal = () => {
-    setRatingModalState({ show: false, saleItemId: null, vegetableId: null, vegetableName: null });
+    if (ratingModalSaleId) {
+        // Crucial: Set session storage to prevent reopening on next fetch/render
+        sessionStorage.setItem(`rating-dismissed-${ratingModalSaleId}`, 'true');
+    }
+    setRatingModalSaleId(null);
+  };
+  
+  const handleSubmitRatingSuccess = () => {
+      setRatingModalSaleId(null);
+      fetchBills(); // Refetch to update the UI with the new rating
   };
 
-  const handleSubmitRatingSuccess = () => {
-    fetchBills();
-  };
 
   const handleReorder = async (bill: BillEntry) => {
       try {
@@ -275,7 +278,6 @@ const BillsScreen: React.FC<BillsScreenProps> = ({ language, user, isTruckLive, 
                         bill={bill}
                         onReorderClick={handleReorder}
                         language={language}
-                        onRateItem={handleRateItem}
                     />
                 )) : (
                     <div className="text-center p-8 my-8 bg-gray-50 rounded-lg">
@@ -305,14 +307,16 @@ const BillsScreen: React.FC<BillsScreenProps> = ({ language, user, isTruckLive, 
       
       {renderContent()}
 
-       {ratingModalState.show && (
-          <RatingModal
-            show={ratingModalState.show}
-            onClose={handleCloseRatingModal}
-            onSubmitSuccess={handleSubmitRatingSuccess}
-            saleItemId={ratingModalState.saleItemId!}
-            vegetableName={ratingModalState.vegetableName!}
-          />
+      {ratingModalSaleId && (
+        <Suspense fallback={<div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[100]"><LoadingSpinner /></div>}>
+            <BatchRatingModal
+                language={language}
+                show={!!ratingModalSaleId}
+                onClose={handleCloseRatingModal}
+                onSubmitSuccess={handleSubmitRatingSuccess}
+                saleId={ratingModalSaleId}
+            />
+        </Suspense>
       )}
     </div>
   );

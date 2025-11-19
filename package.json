@@ -49,9 +49,11 @@
     "jwt-decode": "^4.0.0",
     "leaflet": "^1.9.4",
     "lottie-react": "^2.4.1",
+    "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.3.0",
+    "speakeasy": "^2.0.0",
     "zustand": "5.0.8"
   }
 }

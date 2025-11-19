@@ -1,13 +1,15 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import React, { useContext, useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { AuthContext } from '@common/AuthContext';
 import LoadingSpinner from '@common/components/LoadingSpinner';
-import DriverDashboard from './components/DriverDashboard';
 import DriverLogin from './components/DriverLogin';
 import UrgentOrderToast from '@common/components/UrgentOrderToast';
 import { Sale } from '@common/types';
 import { getActions, clearActions } from './offline';
 import * as api from '@common/api';
 import { getWebSocketUrl } from '@common/utils';
+import OrderRequestToast from './components/OrderRequestToast';
+
+const DriverDashboard = lazy(() => import('./components/DriverDashboard'));
 
 const useOnlineStatus = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -45,6 +47,7 @@ const StatusBanner: React.FC<{ isOnline: boolean; syncStatus: string; }> = ({ is
 const DriverApp: React.FC = () => {
     const auth = useContext(AuthContext);
     const [newOrderToast, setNewOrderToast] = useState<Sale | null>(null);
+    const [orderRequest, setOrderRequest] = useState<Sale | null>(null);
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncStatus, setSyncStatus] = useState('');
     const ws = useRef<WebSocket | null>(null);
@@ -105,9 +108,17 @@ const DriverApp: React.FC = () => {
             ws.current.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    // This is a generic broadcast for admins/drivers to see
                     if (data.type === 'new_urgent_order') {
                         setNewOrderToast(data.payload);
                         setTimeout(() => setNewOrderToast(null), 8000);
+                    }
+                    // This is a specific request for this driver to accept
+                    if (data.type === 'new_urgent_order_request') {
+                        // Prevent showing a new request if one is already active
+                        if (!orderRequest) {
+                            setOrderRequest(data.payload);
+                        }
                     }
                 } catch(e) {
                     console.error('Error parsing driver websocket message:', e);
@@ -116,7 +127,7 @@ const DriverApp: React.FC = () => {
             
             return () => ws.current?.close();
         }
-    }, [auth?.user]);
+    }, [auth?.user, orderRequest]); // Added orderRequest to dependency array
 
 
     if (!auth || auth.isInitialLoading) {
@@ -125,15 +136,38 @@ const DriverApp: React.FC = () => {
 
     const renderContent = () => {
         if (auth.user && auth.user.role === 'DRIVER') {
-            return <DriverDashboard isOnline={isOnline} />;
+            return (
+                <Suspense fallback={<div className="h-screen flex items-center justify-center"><LoadingSpinner /></div>}>
+                    <DriverDashboard isOnline={isOnline} />
+                </Suspense>
+            );
         }
         return <DriverLogin />;
     }
+
+    const handleAccept = () => {
+        // You could add logic here, e.g., show a confirmation
+        setOrderRequest(null);
+    };
+
+    const handleDecline = () => {
+        // You could add logic here, e.g., send a 'decline' message
+        setOrderRequest(null);
+    };
+
 
     return (
         <div className="bg-slate-50 min-h-screen">
             <StatusBanner isOnline={isOnline} syncStatus={syncStatus} />
             <UrgentOrderToast order={newOrderToast} onClose={() => setNewOrderToast(null)} />
+            {orderRequest && (
+                <OrderRequestToast
+                    order={orderRequest}
+                    onAccept={handleAccept}
+                    onDecline={handleDecline}
+                    ws={ws.current}
+                />
+            )}
             {renderContent()}
         </div>
     );
