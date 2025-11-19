@@ -49,6 +49,16 @@ export default defineConfig({
         admin: path.resolve(__dirname, 'admin.html'),
         driver: path.resolve(__dirname, 'driver.html'), 
       },
+      output: {
+        manualChunks: {
+            // Split vendor code into separate chunks
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-maps': ['leaflet'],
+            'vendor-charts': ['recharts'],
+            'vendor-utils': ['lodash', 'date-fns'], // If you use these
+        }
+      }
     },
+    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit
   },
 })

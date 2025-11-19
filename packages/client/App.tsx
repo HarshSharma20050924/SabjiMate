@@ -1,14 +1,16 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, lazy, Suspense } from 'react';
 import { Language, User, DeliveryArea } from '@common/types';
 import Login from './components/Login';
-import MainLayout from './components/MainLayout';
 import Intro from './components/Intro';
 // FIX: Import AuthContextType to correctly type the context value.
 import { AuthContext, AuthContextType } from '@common/AuthContext';
 import LoadingSpinner from '@common/components/LoadingSpinner';
-import ProfileScreen from './components/screens/ProfileScreen';
-import ComingSoonScreen from './components/screens/ComingSoonScreen';
 import * as api from '@common/api';
+
+// Lazy load heavy components so they don't block the initial Login screen load
+const MainLayout = lazy(() => import('./components/MainLayout'));
+const ProfileScreen = lazy(() => import('./components/screens/ProfileScreen'));
+const ComingSoonScreen = lazy(() => import('./components/screens/ComingSoonScreen'));
 
 const ErrorIcon: React.FC = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -143,7 +145,11 @@ const App: React.FC = () => {
        const isProfileComplete = auth.user.address && auth.user.city && auth.user.state && auth.user.name && !auth.user.name.startsWith('User ');
        
        if (!isProfileComplete) {
-           return <ProfileScreen language={language} onSaveSuccess={handleOnboardingComplete} />;
+           return (
+               <Suspense fallback={<div className="h-screen flex items-center justify-center"><LoadingSpinner /></div>}>
+                    <ProfileScreen language={language} onSaveSuccess={handleOnboardingComplete} />
+               </Suspense>
+           );
        }
        
        const isServiceable = serviceableAreas.some(area => 
@@ -152,11 +158,20 @@ const App: React.FC = () => {
        );
 
        if (!isServiceable) {
-           return <ComingSoonScreen user={auth.user} language={language} />;
+           return (
+               <Suspense fallback={<div className="h-screen flex items-center justify-center"><LoadingSpinner /></div>}>
+                   <ComingSoonScreen user={auth.user} language={language} />
+               </Suspense>
+           );
        }
 
-       return <MainLayout user={auth.user} language={language} setLanguage={setLanguage} />;
+       return (
+           <Suspense fallback={<div className="h-screen flex items-center justify-center"><LoadingSpinner /></div>}>
+                <MainLayout user={auth.user} language={language} setLanguage={setLanguage} />
+           </Suspense>
+       );
     }
+    // Login is kept synchronous for immediate interactivity
     return <Login language={language} setLanguage={setLanguage} />;
   }
 
