@@ -1,10 +1,8 @@
-
-
 import React, { useState, useContext, lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { Language, ActiveTab, User, OrderItem } from '@common/types';
 import Header from './Header';
 import BottomNav from './BottomNav';
-import { AuthContext } from '@common/AuthContext';
+import { AuthContext, AuthContextType } from '@common/AuthContext';
 import LoadingSpinner from '@common/components/LoadingSpinner';
 import ConfirmationOverlay from '@common/components/ConfirmationOverlay';
 // @FIX: Import AppState type for explicit typing.
@@ -35,7 +33,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
   const [activeScreen, setActiveScreen] = useState<ActiveTab>(ActiveTab.Home);
   const [showStandingOrderScreen, setShowStandingOrderScreen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null); // State for PWA install prompt
-  const auth = useContext(AuthContext);
+  const auth = useContext(AuthContext) as AuthContextType;
 
   // FIX: Refactor to use individual selectors for performance and to fix infinite loops.
   const wishlistCount = useStore((state: AppState) => state.wishlist.length);
@@ -109,6 +107,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
         setInstallPrompt(e);
     };
     window.addEventListener('beforeinstallprompt', handler);
+    
+    // Also check if app is already installed to potentially hide instructions
+    window.addEventListener('appinstalled', () => {
+        setInstallPrompt(null);
+        console.log('PWA was installed');
+    });
+
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 

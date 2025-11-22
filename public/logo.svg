@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Green Background Gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e000"/>
+      <stop offset="100%" stop-color="#00b300"/>
+    </linearGradient>
+
+    <!-- Soft Shadow -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur"/>
+      <feOffset dy="5" result="offset"/>
+      <feMerge>
+        <feMergeNode in="offset"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)" />
+
+  <!-- White Octagon -->
+  <path 
+    d="M150 70 H362 L450 158 V352 L362 440 H150 L62 352 V158 Z"
+    fill="white"
+    stroke="#ececec"
+    stroke-width="4"
+    filter="url(#shadow)"
+  />
+
+  <!-- Stacked Text -->
+  <g text-anchor="middle" font-family="Poppins, sans-serif">
+    
+    <!-- Thicker सब्ज़ी -->
+    <text 
+      x="256" 
+      y="245" 
+      font-size="105" 
+      font-weight="900" 
+      fill="#00a63f">
+      सब्ज़ी
+    </text>
+
+    <!-- Smaller MATE -->
+    <text 
+      x="256" 
+      y="330" 
+      font-size="80" 
+      font-weight="700" 
+      fill="#ff3b30">
+      MATE
+    </text>
+
+  </g>
+
+</svg>
