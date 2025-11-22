@@ -10,7 +10,9 @@ import prisma from '../db';
 import { protect, admin } from '../middleware/auth';
 // @ts-ignore: This is a valid import after `prisma generate`
 import { Vegetable as PrismaVegetable, LocationPrice as PrismaLocationPrice, DeliveryArea as PrismaDeliveryArea } from '@prisma/client';
+
 import logger from '../logger';
+import { cacheMiddleware, invalidateCache } from '../middleware/cache';
 
 const router = Router();
 
@@ -19,16 +21,16 @@ type VegetableWithRelations = PrismaVegetable & {
 };
 
 // This route is public, for clients to see today's vegetable list
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', cacheMiddleware(600), async (req: Request, res: Response) => {
     const { city } = req.query;
 
     try {
-        const vegetables: VegetableWithRelations[] = await prisma.vegetable.findMany({ 
+        const vegetables: VegetableWithRelations[] = await prisma.vegetable.findMany({
             where: { isAvailable: true }, // Only fetch available vegetables
             include: { locationPrices: { include: { area: true } } },
-            orderBy: { name: 'asc' } 
+            orderBy: { name: 'asc' }
         });
-        
+
         const pricedVegetables = vegetables.map(veg => {
             let finalSabzimatePrice = veg.sabzimatePrice;
             let finalMarketPrice = veg.marketPrice;
@@ -40,7 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
                     finalMarketPrice = locationPrice.marketPrice;
                 }
             }
-            
+
             // The client expects 'price' as the selling price.
             return {
                 id: veg.id,
@@ -68,17 +70,20 @@ router.use(protect, admin);
 router.post('/', async (req: Request, res: Response) => {
     try {
         const { name, marketPrice, sabzimatePrice, unit, image, offerTag, description, category, isAvailable } = req.body;
-        const veg = await prisma.vegetable.create({ data: { 
-            name, 
-            marketPrice: parseFloat(marketPrice), 
-            sabzimatePrice: parseFloat(sabzimatePrice), 
-            unit, 
-            image,
-            offerTag,
-            description,
-            category,
-            isAvailable,
-        } });
+        const veg = await prisma.vegetable.create({
+            data: {
+                name,
+                marketPrice: parseFloat(marketPrice),
+                sabzimatePrice: parseFloat(sabzimatePrice),
+                unit,
+                image,
+                offerTag,
+                description,
+                category,
+                isAvailable,
+            }
+        });
+        await invalidateCache('/api/vegetables');
         res.status(201).json(veg);
     } catch (error: any) {
         logger.error(error, "Failed to create vegetable");
@@ -93,20 +98,21 @@ router.put('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { name, marketPrice, sabzimatePrice, unit, image, offerTag, description, category, isAvailable } = req.body;
-        const veg = await prisma.vegetable.update({ 
-            where: { id: parseInt(id) }, 
-            data: { 
-                name, 
-                marketPrice: parseFloat(marketPrice), 
-                sabzimatePrice: parseFloat(sabzimatePrice), 
-                unit, 
+        const veg = await prisma.vegetable.update({
+            where: { id: parseInt(id) },
+            data: {
+                name,
+                marketPrice: parseFloat(marketPrice),
+                sabzimatePrice: parseFloat(sabzimatePrice),
+                unit,
                 image,
                 offerTag,
                 description,
                 category,
                 isAvailable,
-            } 
+            }
         });
+        await invalidateCache('/api/vegetables');
         res.json(veg);
     } catch (error: any) {
         logger.error(error, "Failed to update vegetable");
@@ -121,6 +127,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         await prisma.vegetable.delete({ where: { id: parseInt(id) } });
+        await invalidateCache('/api/vegetables');
         res.status(204).send();
     } catch (error: any) {
         logger.error(error, "Failed to delete vegetable");
@@ -151,6 +158,7 @@ router.post('/:vegId/prices', async (req: Request, res: Response) => {
             update: { marketPrice, sabzimatePrice },
             create: { vegetableId: parseInt(vegId), areaId: areaId, marketPrice, sabzimatePrice }
         });
+        await invalidateCache('/api/vegetables');
         res.status(201).json(newOrUpdatedPrice);
     } catch (e: any) {
         logger.error(e, "Failed to set location price");

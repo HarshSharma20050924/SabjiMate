@@ -1,3 +1,4 @@
+
 export enum Language {
   EN = 'EN',
   HI = 'HI',
@@ -12,6 +13,7 @@ export enum ActiveTab {
   Profile = 'Profile',
   History = 'History',
   Settings = 'Settings',
+  Support = 'Support', // Added
 }
 
 export type PaymentPreference = 'DAILY' | 'WEEKLY' | 'MONTHLY';
@@ -255,4 +257,24 @@ export interface AdminAnalyticsSummary {
         suggestedOrder: string;
         reasoning: string;
     }[];
+}
+
+// --- Support & Notifications ---
+
+export interface SupportTicket {
+    id: number;
+    userId: string;
+    subject: string;
+    message: string;
+    status: 'OPEN' | 'CLOSED' | 'RESOLVED';
+    createdAt: string;
+}
+
+export interface AppNotification {
+    id: number;
+    title: string;
+    body: string;
+    type: 'INFO' | 'ORDER' | 'PROMO';
+    isRead: boolean;
+    createdAt: string;
 }

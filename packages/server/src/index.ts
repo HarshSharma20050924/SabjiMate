@@ -1,11 +1,14 @@
 
-
+import './config/env'; // MUST BE FIRST
 import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import cors from 'cors';
 import path from 'path';
-import dotenv from 'dotenv';
 import logger from './logger'; // Import the new logger
+import { apiLimiter } from './middleware/rateLimiter';
+import prisma from './db';
+import swaggerUi from 'swagger-ui-express';
+import { specs } from './config/swagger';
 import authRoutes from './routes/auth';
 import aiRoutes from './routes/ai';
 import adminRoutes from './routes/admin';
@@ -15,20 +18,16 @@ import vegetableRoutes from './routes/vegetables';
 import deliveryRoutes from './routes/deliveries';
 import paymentRoutes from './routes/payments'; // New payment routes
 import notificationRoutes from './routes/notifications'; // Import new notification routes
+import supportRoutes from './routes/support'; // Import support routes
 import { initializeDefaultAdmin } from './services/user';
 import { initializeWebSocket } from './websocket';
 import { configurePush } from './services/notifications';
-
-const envFile = process.env.NODE_ENV === 'production' ? '.env.production' : '.env.development';
-const envPath = path.resolve(__dirname, `../../../${envFile}`);
-dotenv.config({ path: envPath });
 
 
 // --- Startup Environment Logging ---
 logger.info('--- SERVER ENVIRONMENT ---');
 logger.info(`NODE_ENV: ${process.env.NODE_ENV}`);
 logger.info(`FORCE_DEV_OTP: ${process.env.FORCE_DEV_OTP}`);
-logger.info(`Loaded .env from: ${envPath}`);
 logger.info('--------------------------');
 
 
@@ -80,6 +79,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 
 // --- API Routes (MUST be before static files) ---
+app.get('/health', (req, res) => res.status(200).send('OK'));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+app.use('/api', apiLimiter); // Apply rate limiting to all API routes
+
 app.use('/api/auth', authRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/admin', adminRoutes);
@@ -88,6 +91,7 @@ app.use('/api/vegetables', vegetableRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/notifications', notificationRoutes); // Mount notification routes
+app.use('/api/support', supportRoutes); // Mount support routes
 app.use('/api', appRoutes);
 
 // --- Serve Static Frontend Files ---
@@ -114,3 +118,23 @@ server.listen(PORT, async () => {
     logger.info(`✅ Server running on http://localhost:${PORT}`);
     await initializeDefaultAdmin();
 });
+
+// --- Graceful Shutdown ---
+const shutdown = async () => {
+    logger.info('SIGTERM/SIGINT received. Shutting down gracefully...');
+    server.close(() => {
+        logger.info('HTTP server closed.');
+    });
+
+    try {
+        await prisma.$disconnect();
+        logger.info('Database connection closed.');
+        process.exit(0);
+    } catch (err) {
+        logger.error(err, 'Error during shutdown');
+        process.exit(1);
+    }
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

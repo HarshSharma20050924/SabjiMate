@@ -1,3 +1,4 @@
+
 import { Router } from 'express';
 import { protect } from '../middleware/auth';
 import prisma from '../db';
@@ -82,6 +83,46 @@ router.post('/unsubscribe', async (req, res) => {
     } catch (error) {
         logger.error(error, 'Failed to delete push subscription.');
         res.status(500).json({ error: 'Could not remove subscription.' });
+    }
+});
+
+// --- In-App Notifications (Inbox) ---
+
+// GET /api/notifications - Get current user's notifications
+router.get('/', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authorized' });
+    try {
+        const notifications = await prisma.notification.findMany({
+            where: { userId: req.user.phone },
+            orderBy: { createdAt: 'desc' },
+            take: 50 // Limit to last 50
+        });
+        res.json(notifications);
+    } catch (error) {
+        logger.error(error, 'Failed to fetch in-app notifications');
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// PUT /api/notifications/:id/read - Mark as read
+router.put('/:id/read', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Not authorized' });
+    const id = parseInt(req.params.id);
+    
+    try {
+        const notification = await prisma.notification.findUnique({ where: { id } });
+        if (!notification || notification.userId !== req.user.phone) {
+            return res.status(404).json({ error: 'Notification not found' });
+        }
+
+        await prisma.notification.update({
+            where: { id },
+            data: { isRead: true }
+        });
+        res.json({ success: true });
+    } catch (error) {
+        logger.error(error, 'Failed to mark notification as read');
+        res.status(500).json({ error: 'Internal server error' });
     }
 });
 

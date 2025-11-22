@@ -1,3 +1,4 @@
+
 import React, { useContext, useState, useEffect } from 'react';
 import { Language, User, PaymentPreference } from '../../../common/types';
 import { translations } from '../../../common/constants';
@@ -18,20 +19,21 @@ const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-
 const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>;
 
 interface SettingsScreenProps {
-  language: Language;
-  setLanguage: (language: Language) => void;
-  onClose: () => void;
-  onNavigateToProfile: () => void;
-  onNavigateToStandingOrder: () => void;
-  onNavigateToHistory: () => void;
-  isInstallable: boolean;
-  onInstallApp: () => void;
+    language: Language;
+    setLanguage: (language: Language) => void;
+    onClose: () => void;
+    onNavigateToProfile: () => void;
+    onNavigateToStandingOrder: () => void;
+    onNavigateToHistory: () => void;
+    onNavigateToSupport: () => void; // Added
+    isInstallable: boolean;
+    onInstallApp: () => void;
 }
 
-const SettingsItem: React.FC<{icon: React.ReactNode, label: string, onClick?: () => void, children?: React.ReactNode, disabled?: boolean}> = ({ icon, label, onClick, children, disabled }) => (
-    <div 
-      className={`flex items-center justify-between p-4 bg-white ${onClick && !disabled ? 'cursor-pointer hover:bg-gray-50' : ''} ${disabled ? 'opacity-50' : ''}`}
-      onClick={disabled ? undefined : onClick}
+const SettingsItem: React.FC<{ icon: React.ReactNode, label: string, onClick?: () => void, children?: React.ReactNode, disabled?: boolean }> = ({ icon, label, onClick, children, disabled }) => (
+    <div
+        className={`flex items-center justify-between p-4 bg-white ${onClick && !disabled ? 'cursor-pointer hover:bg-gray-50' : ''} ${disabled ? 'opacity-50' : ''}`}
+        onClick={disabled ? undefined : onClick}
     >
         <div className="flex items-center space-x-4">
             <span className="text-green-600">{icon}</span>
@@ -44,12 +46,12 @@ const SettingsItem: React.FC<{icon: React.ReactNode, label: string, onClick?: ()
 );
 
 
-const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, onClose, onNavigateToProfile, onNavigateToStandingOrder, onNavigateToHistory, isInstallable, onInstallApp }) => {
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, onClose, onNavigateToProfile, onNavigateToStandingOrder, onNavigateToHistory, onNavigateToSupport, isInstallable, onInstallApp }) => {
     const t = translations[language];
     const auth = useContext(AuthContext);
     const [user, setUser] = useState<User>(auth.user!);
     const [isSaving, setIsSaving] = useState(false);
-    
+
     const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(Notification.permission);
     const [isSubscribing, setIsSubscribing] = useState(false);
 
@@ -81,7 +83,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
             alert('You have blocked notifications. Please enable them in your browser settings to receive updates.');
             return;
         }
-        
+
         // We allow re-subscribing even if status is 'granted' to fix desync issues.
 
         setIsSubscribing(true);
@@ -94,17 +96,17 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
                 const swRegistration = await navigator.serviceWorker.ready;
                 const vapidPublicKey = await api.getVapidPublicKey();
                 const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
-                
+
                 // Attempt to subscribe (browser might return existing subscription)
                 let subscription = await swRegistration.pushManager.getSubscription();
-                
+
                 if (!subscription) {
                     subscription = await swRegistration.pushManager.subscribe({
                         userVisibleOnly: true,
                         applicationServerKey: convertedVapidKey
                     });
                 }
-                
+
                 // Send subscription to server (sync)
                 await api.subscribeToPush(subscription);
                 alert('Notifications synced successfully! You should receive updates now.');
@@ -119,7 +121,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
 
     const getNotificationButton = () => {
         if (!('PushManager' in window)) {
-             return <span className="text-sm font-semibold text-gray-400">Not Supported</span>
+            return <span className="text-sm font-semibold text-gray-400">Not Supported</span>
         }
         if (isSubscribing) {
             return <span className="text-sm font-semibold text-gray-500">Syncing...</span>
@@ -128,8 +130,8 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
         switch (notificationStatus) {
             case 'granted':
                 return (
-                    <button 
-                        onClick={handleNotificationRequest} 
+                    <button
+                        onClick={handleNotificationRequest}
                         className="text-sm font-semibold text-green-600 hover:text-green-800 hover:underline focus:outline-none"
                         title="Click to re-sync if notifications aren't working"
                     >
@@ -140,7 +142,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
                 return <span className="text-sm font-semibold text-red-600">Blocked</span>
             default:
                 return (
-                    <button 
+                    <button
                         onClick={handleNotificationRequest}
                         className="px-3 py-1 text-sm font-semibold rounded-full bg-blue-500 text-white hover:bg-blue-600"
                     >
@@ -167,7 +169,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-100">
+        <div className="flex flex-col h-full bg-slate-100 animate-slide-in-right-fast">
             <header className="flex items-center p-4 border-b bg-white flex-shrink-0 sticky top-0 z-10">
                 <button onClick={onClose} className="p-2 -ml-2 text-gray-600">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -175,7 +177,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
                 <h2 className="text-xl font-bold text-gray-800 mx-auto">My Account</h2>
                 <div className="w-6"></div>
             </header>
-            
+
             <main className="flex-grow overflow-y-auto p-4 space-y-6">
                 <div className="bg-white rounded-lg shadow-sm p-4 flex items-center space-x-4">
                     <img src={user.image || '/logo.svg'} alt="Profile" className="w-20 h-20 rounded-full object-cover border-4 border-slate-200" />
@@ -205,19 +207,19 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
                             </div>
                         </SettingsItem>
                         <SettingsItem icon={<WalletIcon />} label="My Payment Methods">
-                             <span className="text-sm text-gray-400 font-semibold">Coming Soon</span>
+                            <span className="text-sm text-gray-400 font-semibold">Coming Soon</span>
                         </SettingsItem>
                     </div>
                 </div>
 
-                 <div>
+                <div>
                     <h3 className="px-4 pb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">My Activity</h3>
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden divide-y divide-gray-200">
                         <SettingsItem icon={<HistoryIcon />} label={t.orderHistory} onClick={onNavigateToHistory} />
                         <SettingsItem icon={<EssentialsIcon />} label={t.myDailyEssentials} onClick={onNavigateToStandingOrder} />
                     </div>
                 </div>
-                
+
                 <div>
                     <h3 className="px-4 pb-2 text-sm font-bold text-gray-500 uppercase tracking-wider">Settings & Help</h3>
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden divide-y divide-gray-200">
@@ -228,24 +230,24 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
                                 <button onClick={() => setLanguage(Language.HI)} className={`px-3 py-1 rounded-full font-semibold transition-colors ${language === Language.HI ? 'bg-white shadow' : 'text-gray-600'}`}>{t.hindi}</button>
                             </div>
                         </SettingsItem>
-                         <SettingsItem icon={<BellIcon />} label="Push Notifications">
+                        <SettingsItem icon={<BellIcon />} label="Push Notifications">
                             {getNotificationButton()}
                         </SettingsItem>
                         {isInstallable && (
                             <SettingsItem icon={<DownloadIcon />} label="Install App" onClick={onInstallApp} />
                         )}
-                         <SettingsItem icon={<HelpIcon />} label={t.helpSupport} onClick={() => alert('Contact us at +91 12345 67890 or support@sabzimate.com')} />
+                        <SettingsItem icon={<HelpIcon />} label={t.helpSupport} onClick={onNavigateToSupport} />
                     </div>
                 </div>
 
-                 <div className="pt-4">
+                <div className="pt-4">
                     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
                         <button onClick={auth.logout} className="w-full text-center p-4 text-red-600 font-semibold hover:bg-red-50 transition-colors">{t.logout}</button>
                     </div>
                 </div>
-                
+
                 <div className="text-center text-xs text-gray-400 pt-4 pb-8">
-                    <p>{t.appName} - {t.appVersion} 1.0.0</p>
+                    <p>{t.appName} - {t.appVersion} 1.1.0</p>
                 </div>
             </main>
         </div>

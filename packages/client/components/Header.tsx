@@ -1,10 +1,14 @@
+
 import React from 'react';
 import { User } from '@common/types';
+import NotificationCenter from './NotificationCenter';
 
 interface HeaderProps {
   user: User;
   onProfileClick: () => void;
   onSettingsClick: () => void;
+  installPrompt?: any;
+  onInstallClick?: () => void;
 }
 
 const ProfileIcon: React.FC<{className: string}> = ({className}) => (
@@ -20,8 +24,14 @@ const SettingsIcon: React.FC<{className: string}> = ({className}) => (
     </svg>
 );
 
+const InstallIcon: React.FC<{className: string}> = ({className}) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+);
 
-const Header: React.FC<HeaderProps> = ({ user, onProfileClick, onSettingsClick }) => {
+
+const Header: React.FC<HeaderProps> = ({ user, onProfileClick, onSettingsClick, installPrompt, onInstallClick }) => {
   return (
     <header className="bg-white shadow-md p-3 flex justify-between items-center sticky top-0 z-20 h-16">
       {/* Left: Profile */}
@@ -43,9 +53,21 @@ const Header: React.FC<HeaderProps> = ({ user, onProfileClick, onSettingsClick }
         </h1>
       </div>
 
-      {/* Right: Settings */}
-      <div className="flex-1 flex justify-end">
-        <button onClick={onSettingsClick} className="text-gray-600 hover:text-green-700 p-2">
+      {/* Right: Settings & Notifications */}
+      <div className="flex-1 flex justify-end items-center space-x-2">
+        {/* PWA Install Button */}
+        {installPrompt && onInstallClick && (
+            <button 
+                onClick={onInstallClick} 
+                className="bg-green-100 text-green-700 p-2 rounded-full hover:bg-green-200 animate-pulse-gold shadow-sm"
+                title="Install App"
+            >
+                <InstallIcon className="w-6 h-6" />
+            </button>
+        )}
+        
+        <NotificationCenter />
+        <button onClick={onSettingsClick} className="text-gray-600 hover:text-green-700 p-1">
             <SettingsIcon className="w-7 h-7" />
         </button>
       </div>

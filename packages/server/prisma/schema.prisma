@@ -34,25 +34,37 @@ enum DiscountType {
   FIXED
 }
 
+enum TicketStatus {
+  OPEN
+  CLOSED
+  RESOLVED
+}
+
+enum NotificationType {
+  INFO
+  ORDER
+  PROMO
+}
+
 // --- Models ---
 
 model User {
-  phone                 String                 @id
-  name                  String
-  address               String?
-  image                 String?
-  city                  String?
-  state                 String?
-  latitude              Float?
-  longitude             Float?
-  role                  Role                   @default(USER)
-  password              String?
-  paymentPreference     PaymentPreference?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  phone             String             @id
+  name              String
+  address           String?
+  image             String?
+  city              String?
+  state             String?
+  latitude          Float?
+  longitude         Float?
+  role              Role               @default(USER)
+  password          String?
+  paymentPreference PaymentPreference?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  isTwoFactorEnabled    Boolean                @default(false)
-  twoFactorSecret       String?
+  isTwoFactorEnabled Boolean @default(false)
+  twoFactorSecret    String?
 
   sales                 Sale[]
   deliveryConfirmations DeliveryConfirmation[]
@@ -60,39 +72,41 @@ model User {
   standingOrders        StandingOrder[]
   pushSubscriptions     PushSubscription[]
   batchReviews          BatchReview[]
+  tickets               SupportTicket[]
+  notifications         Notification[]
 
   @@index([role])
 }
 
 model Vegetable {
-  id              Int             @id @default(autoincrement())
-  name            Json
-  marketPrice     Float
-  sabzimatePrice  Float
-  unit            Json
-  image           String
-  
-  images          String[]        @default([])
+  id             Int    @id @default(autoincrement())
+  name           Json
+  marketPrice    Float
+  sabzimatePrice Float
+  unit           Json
+  image          String
+
+  images          String[] @default([])
   videoUrl        String?
   highlights      Json?
   nutritionalInfo Json?
 
-  offerTag        String?
-  description     String?
-  category        String?
-  isAvailable     Boolean         @default(true)
-  
-  averageRating   Float?
-  ratingCount     Int             @default(0)
+  offerTag    String?
+  description String?
+  category    String?
+  isAvailable Boolean @default(true)
 
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  
-  wishlistItems   WishlistItem[]
-  standingOrders  StandingOrder[]
-  saleItems       SaleItem[]
-  locationPrices  LocationPrice[]
-  
+  averageRating Float?
+  ratingCount   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wishlistItems  WishlistItem[]
+  standingOrders StandingOrder[]
+  saleItems      SaleItem[]
+  locationPrices LocationPrice[]
+
   @@unique([name])
   @@index([isAvailable])
 }
@@ -107,10 +121,10 @@ model Sale {
   couponCode    String?
   createdAt     DateTime      @default(now())
 
-  user          User          @relation(fields: [userId], references: [phone])
-  items         SaleItem[]
-  coupon        Coupon?       @relation(fields: [couponCode], references: [code])
-  batchReview   BatchReview? // A sale can have one overall batch review
+  user        User         @relation(fields: [userId], references: [phone])
+  items       SaleItem[]
+  coupon      Coupon?      @relation(fields: [couponCode], references: [code])
+  batchReview BatchReview? // A sale can have one overall batch review
 
   @@index([userId])
   @@index([date])
@@ -118,15 +132,15 @@ model Sale {
 }
 
 model SaleItem {
-  id            Int       @id @default(autoincrement())
+  id            Int    @id @default(autoincrement())
   saleId        Int
   vegetableId   Int
   vegetableName String
   quantity      String
   price         Float
 
-  sale          Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  vegetable     Vegetable @relation(fields: [vegetableId], references: [id])
+  sale      Sale      @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  vegetable Vegetable @relation(fields: [vegetableId], references: [id])
 
   @@index([saleId])
   @@index([vegetableId])
@@ -134,17 +148,17 @@ model SaleItem {
 
 // NEW: BatchReview model for rating an entire delivery/sale
 model BatchReview {
-  id        Int      @id @default(autoincrement())
-  saleId    Int      @unique
-  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  
-  userId    String
-  user      User     @relation(fields: [userId], references: [phone], onDelete: Cascade)
+  id     Int  @id @default(autoincrement())
+  saleId Int  @unique
+  sale   Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
 
-  rating    Int      // 1-5 star rating
+  userId String
+  user   User   @relation(fields: [userId], references: [phone], onDelete: Cascade)
+
+  rating    Int // 1-5 star rating
   comment   String?
   createdAt DateTime @default(now())
-  
+
   @@index([userId])
 }
 
@@ -189,7 +203,7 @@ model StandingOrder {
   quantity    String
   user        User      @relation(fields: [userId], references: [phone])
   vegetable   Vegetable @relation(fields: [vegetableId], references: [id])
-  
+
   @@unique([userId, vegetableId])
   @@index([userId])
 }
@@ -200,21 +214,21 @@ model DeliveryArea {
   state          String
   isActive       Boolean         @default(true)
   locationPrices LocationPrice[]
-  
+
   @@unique([city, state])
 }
 
 model LocationPrice {
-  id             Int          @id @default(autoincrement())
+  id             Int   @id @default(autoincrement())
   marketPrice    Float
   sabzimatePrice Float
-  
-  vegetableId    Int
-  vegetable      Vegetable    @relation(fields: [vegetableId], references: [id], onDelete: Cascade)
-  
-  areaId         Int
-  area           DeliveryArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
-  
+
+  vegetableId Int
+  vegetable   Vegetable @relation(fields: [vegetableId], references: [id], onDelete: Cascade)
+
+  areaId Int
+  area   DeliveryArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
   @@unique([vegetableId, areaId])
   @@index([areaId])
 }
@@ -230,16 +244,47 @@ model Coupon {
   usageLimit    Int?
   usageCount    Int          @default(0)
   createdAt     DateTime     @default(now())
-  
-  sales         Sale[]
+
+  sales Sale[]
 }
 
 model PushSubscription {
-  endpoint String   @id
-  keys     Json
-  userId   String
-  user     User     @relation(fields: [userId], references: [phone], onDelete: Cascade)
+  endpoint  String   @id
+  keys      Json
+  userId    String
+  user      User     @relation(fields: [userId], references: [phone], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+model SupportTicket {
+  id        Int          @id @default(autoincrement())
+  userId    String
+  subject   String
+  message   String
+  status    TicketStatus @default(OPEN)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [phone])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    String
+  title     String
+  body      String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  data      Json?
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [phone])
+
+  @@index([userId])
+  @@index([isRead])
 }

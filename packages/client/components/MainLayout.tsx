@@ -1,3 +1,5 @@
+
+
 import React, { useState, useContext, lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { Language, ActiveTab, User, OrderItem } from '@common/types';
 import Header from './Header';
@@ -20,6 +22,7 @@ const HistoryScreen = lazy(() => import('./screens/HistoryScreen'));
 const SettingsScreen = lazy(() => import('./screens/SettingsScreen'));
 const StandingOrderScreen = lazy(() => import('./screens/StandingOrderScreen'));
 const MyListScreen = lazy(() => import('./screens/MyListScreen'));
+const SupportScreen = lazy(() => import('./screens/SupportScreen'));
 
 
 interface MainLayoutProps {
@@ -206,6 +209,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
                     language={language}
                     onConfirmSuccess={handleConfirmSuccess}
                 />;
+      case ActiveTab.Support:
+          return <SupportScreen language={language} />;
       case ActiveTab.Settings:
           return <SettingsScreen
               language={language}
@@ -214,6 +219,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
               onNavigateToProfile={() => setActiveScreen(ActiveTab.Profile)}
               onNavigateToHistory={() => setActiveScreen(ActiveTab.Bills)}
               onNavigateToStandingOrder={() => setShowStandingOrderScreen(true)}
+              onNavigateToSupport={() => setActiveScreen(ActiveTab.Support)}
               isInstallable={!!installPrompt}
               onInstallApp={handleInstallClick}
           />;
@@ -241,6 +247,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
         user={user}
         onProfileClick={() => setActiveScreen(ActiveTab.Profile)}
         onSettingsClick={() => setActiveScreen(ActiveTab.Settings)}
+        installPrompt={installPrompt}
+        onInstallClick={handleInstallClick}
       />
       <main className="flex-grow overflow-y-auto pb-20 bg-gray-50">
         <Suspense fallback={<div className="h-full flex items-center justify-center"><LoadingSpinner /></div>}>

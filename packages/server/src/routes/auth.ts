@@ -3,7 +3,8 @@ import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import passport from 'passport';
 import { Strategy as GoogleStrategy, Profile, VerifyCallback } from 'passport-google-oauth20';
-import rateLimit from 'express-rate-limit';
+// import rateLimit from 'express-rate-limit'; // Removed in favor of centralized Redis limiter
+import { authLimiter } from '../middleware/rateLimiter';
 import IORedis from 'ioredis';
 import { randomBytes } from 'crypto';
 import prisma from '../db';
@@ -43,7 +44,7 @@ const generateTokens = (user: PrismaUser) => {
 declare global {
     namespace Express {
         interface Request { user?: PrismaUser; }
-        interface User extends PrismaUser {}
+        interface User extends PrismaUser { }
     }
 }
 interface DecodedRefreshToken extends jwt.JwtPayload {
@@ -54,16 +55,7 @@ interface DecodedRefreshToken extends jwt.JwtPayload {
 }
 
 // --- Rate Limiters ---
-const otpLimiter = rateLimit({
-	windowMs: 5 * 60 * 1000,
-	max: 3,
-	message: { error: 'Too many OTP requests. Please try again in 5 minutes.' },
-});
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    message: { error: 'Too many login attempts. Please try again in 15 minutes.'}
-});
+// Using centralized authLimiter from middleware/rateLimiter.ts
 
 
 // --- Passport Google Strategy ---
@@ -71,19 +63,19 @@ passport.use(new GoogleStrategy({
     clientID: GOOGLE_CLIENT_ID,
     clientSecret: GOOGLE_CLIENT_SECRET,
     callbackURL: "/api/auth/google/callback"
-  },
-  async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) => {
-    try {
-        const email = profile.emails?.[0]?.value;
-        if (!email) return done(new Error("No email found from Google profile"));
-        
-        let user = await prisma.user.findUnique({ where: { phone: email } });
-        if (!user) {
-            user = await prisma.user.create({ data: { phone: email, name: profile.displayName || 'New User', role: 'USER' } });
-        }
-        return done(null, user);
-    } catch (err) { return done(err as Error); }
-  }
+},
+    async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) => {
+        try {
+            const email = profile.emails?.[0]?.value;
+            if (!email) return done(new Error("No email found from Google profile"));
+
+            let user = await prisma.user.findUnique({ where: { phone: email } });
+            if (!user) {
+                user = await prisma.user.create({ data: { phone: email, name: profile.displayName || 'New User', role: 'USER' } });
+            }
+            return done(null, user);
+        } catch (err) { return done(err as Error); }
+    }
 ));
 
 // --- Routes ---
@@ -99,7 +91,7 @@ router.get('/google/callback', passport.authenticate('google', { failureRedirect
     res.redirect(`${APP_URL}#token=${token}&user=${userParam}`);
 });
 
-router.post('/login', loginLimiter, async (req: Request, res: Response) => {
+router.post('/login', authLimiter, async (req: Request, res: Response) => {
     const { phone, password } = req.body;
     if (!phone || typeof phone !== 'string' || !password || typeof password !== 'string') {
         return res.status(400).json({ error: 'Phone and password must be provided.' });
@@ -112,7 +104,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     if (user.role !== 'ADMIN' && user.role !== 'DRIVER') {
         return res.status(403).json({ error: 'Access denied. This login is for staff only.' });
     }
-    
+
     // New 2FA check
     if (user.isTwoFactorEnabled) {
         // Generate a temporary token for the 2FA verification step
@@ -124,7 +116,7 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     res.json({ accessToken, refreshToken, user });
 });
 
-router.post('/send-otp', otpLimiter, async (req: Request, res: Response) => {
+router.post('/send-otp', authLimiter, async (req: Request, res: Response) => {
     const { phone } = req.body;
     if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
         return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number.' });
@@ -132,10 +124,10 @@ router.post('/send-otp', otpLimiter, async (req: Request, res: Response) => {
 
     // The magic number gets a fixed OTP for testing purposes
     const otp = (phone === '9876543210') ? '123456' : Math.floor(100000 + Math.random() * 900000).toString();
-    
+
     // Store OTP in Redis with an expiration
     await redisClient.set(`otp:${phone}`, otp, 'EX', OTP_EXPIRATION_SECONDS);
-    
+
     try {
         await sendOTP(phone, otp); // Uses default message template
         res.json({ message: 'OTP sent successfully.' });
@@ -146,7 +138,7 @@ router.post('/send-otp', otpLimiter, async (req: Request, res: Response) => {
 });
 
 
-router.post('/verify-otp', loginLimiter, async (req: Request, res: Response) => {
+router.post('/verify-otp', authLimiter, async (req: Request, res: Response) => {
     const { phone, otp } = req.body;
     if (!phone || !/^[6-9]\d{9}$/.test(phone)) {
         return res.status(400).json({ error: 'A valid 10-digit phone number is required.' });
@@ -159,7 +151,7 @@ router.post('/verify-otp', loginLimiter, async (req: Request, res: Response) => 
     if (!storedOtp || storedOtp !== otp) {
         return res.status(401).json({ error: 'Invalid or expired OTP.' });
     }
-    
+
     // OTP is valid, delete it from Redis to prevent reuse
     await redisClient.del(`otp:${phone}`);
 
@@ -184,13 +176,13 @@ router.post('/refresh', async (req: Request, res: Response) => {
 
     try {
         const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET) as DecodedRefreshToken;
-        
+
         const isBlocked = await redisClient.get(`blocklist:${decoded.jti}`);
         if (isBlocked) {
             return res.status(401).json({ error: 'Token has been invalidated.' });
         }
 
-        const user = await prisma.user.findUnique({ where: { phone: decoded.userId }});
+        const user = await prisma.user.findUnique({ where: { phone: decoded.userId } });
         if (!user) return res.status(401).json({ error: 'User not found.' });
 
         const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);

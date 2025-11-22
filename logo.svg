@@ -1,10 +1,57 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="512" height="512" rx="96" fill="#F0FDF4"/>
-<path d="M228.985 168.159C248.973 148.17 279.034 148.17 299.022 168.159L343.837 212.973C363.826 232.962 363.826 263.023 343.837 283.011L283.011 343.837C263.023 363.826 232.962 363.826 212.973 343.837L168.159 299.022C148.17 279.034 148.17 248.973 168.159 228.985L228.985 168.159Z" fill="#FB923C"/>
-<path d="M222 174L168 228" stroke="#FDBA74" stroke-width="16" stroke-linecap="round"/>
-<path d="M252 204L198 258" stroke="#FDBA74" stroke-width="16" stroke-linecap="round"/>
-<path d="M282 234L228 288" stroke="#FDBA74" stroke-width="16" stroke-linecap="round"/>
-<path d="M198 140C202.971 140 207 135.971 207 131C207 126.029 202.971 122 198 122C193.029 122 189 126.029 189 131C189 135.971 193.029 140 198 140Z" fill="#22C55E"/>
-<path d="M188 152L198.5 131.5L207.5 142.5" stroke="#22C55E" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M228 128L218.5 106.5L207.5 119.5" stroke="#22C55E" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Green Background Gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e000"/>
+      <stop offset="100%" stop-color="#00b300"/>
+    </linearGradient>
+
+    <!-- Soft Shadow -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="10" result="blur"/>
+      <feOffset dy="5" result="offset"/>
+      <feMerge>
+        <feMergeNode in="offset"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="url(#bg)" />
+
+  <!-- White Octagon -->
+  <path 
+    d="M150 70 H362 L450 158 V352 L362 440 H150 L62 352 V158 Z"
+    fill="white"
+    stroke="#ececec"
+    stroke-width="4"
+    filter="url(#shadow)"
+  />
+
+  <!-- Stacked Text -->
+  <g text-anchor="middle" font-family="Poppins, sans-serif">
+    
+    <!-- Thicker सब्ज़ी -->
+    <text 
+      x="256" 
+      y="245" 
+      font-size="105" 
+      font-weight="900" 
+      fill="#00a63f">
+      सब्ज़ी
+    </text>
+
+    <!-- Smaller MATE -->
+    <text 
+      x="256" 
+      y="330" 
+      font-size="80" 
+      font-weight="700" 
+      fill="#ff3b30">
+      MATE
+    </text>
+
+  </g>
+
 </svg>

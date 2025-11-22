@@ -1,3 +1,4 @@
+
 import {
   User,
   Vegetable,
@@ -19,6 +20,8 @@ import {
   ChatMessage,
   AdminAnalyticsSummary,
   BatchReview,
+  AppNotification,
+  SupportTicket
 } from './types';
 import { getApiBaseUrl } from './utils';
 
@@ -126,10 +129,15 @@ export const loginUser = async (phone: string, password: string): Promise<any> =
 export const verify2FA = async (tempToken: string, token: string) => apiFetch('/api/auth/2fa/verify', { method: 'POST', body: JSON.stringify({ tempToken, token }) }).then(res => res.json());
 export const logoutUser = async (): Promise<void> => { await apiFetch('/api/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: localStorage.getItem('refreshToken') }) }); };
 
-// --- Notification APIs ---
+// --- Notification & Support APIs ---
 export const getVapidPublicKey = async (): Promise<string> => apiFetch('/api/notifications/vapidPublicKey', { method: 'GET' }).then(res => res.text());
 export const subscribeToPush = async (subscription: PushSubscription): Promise<void> => { await apiFetch('/api/notifications/subscribe', { method: 'POST', body: JSON.stringify(subscription) }); };
 export const broadcastNotification = async (title: string, body: string): Promise<{ count: number }> => apiFetch('/api/admin/notifications/broadcast', { method: 'POST', body: JSON.stringify({ title, body }) }).then(res => res.json());
+export const getNotifications = async (): Promise<AppNotification[]> => apiFetch('/api/notifications').then(res => res.json());
+export const markNotificationRead = async (id: number): Promise<void> => { await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' }); };
+export const createSupportTicket = async (subject: string, message: string): Promise<SupportTicket> => apiFetch('/api/support', { method: 'POST', body: JSON.stringify({ subject, message }) }).then(res => res.json());
+export const getSupportTickets = async (): Promise<SupportTicket[]> => apiFetch('/api/support').then(res => res.json());
+
 
 // --- Admin APIs ---
 export const getAdminAnalyticsSummary = async (startDate: string, endDate: string): Promise<AdminAnalyticsSummary> => apiFetch(`/api/admin/analytics/summary?startDate=${startDate}&endDate=${endDate}`).then(res => res.json());

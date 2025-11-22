@@ -4,7 +4,7 @@ import prisma from '../db';
 import * as bcrypt from 'bcryptjs';
 import { protect, admin } from '../middleware/auth';
 // @ts-ignore: This will be resolved by running `npx prisma generate`
-import { Prisma as PrismaTypes, PaymentStatus } from '@prisma/client';
+import { Prisma as PrismaTypes, PaymentStatus, NotificationType } from '@prisma/client';
 import logger from '../logger';
 import { UserWishlist } from '../../../common/types';
 import IORedis from 'ioredis';
@@ -157,11 +157,26 @@ router.post('/notifications/broadcast', async (req, res) => {
     }
 
     try {
-        const subscriptions = await prisma.pushSubscription.findMany();
+        const subscriptions = await prisma.pushSubscription.findMany({ include: { user: true } });
         if (subscriptions.length === 0) {
             return res.json({ success: true, count: 0, message: 'No subscribers to notify.' });
         }
 
+        // 1. Create in-app notifications for ALL users that have a subscription (or just all users if you prefer)
+        // To be safe and efficient, we'll create notifications for the users we found in subscriptions
+        const userIds = Array.from(new Set(subscriptions.map(s => s.userId)));
+        
+        await prisma.notification.createMany({
+            data: userIds.map(userId => ({
+                userId,
+                title,
+                body,
+                type: NotificationType.INFO, // Default type
+                isRead: false
+            }))
+        });
+
+        // 2. Send Web Push
         const payload = {
             title,
             body,
@@ -169,7 +184,7 @@ router.post('/notifications/broadcast', async (req, res) => {
             data: { url: '/' } // Open the app's root on click
         };
 
-        logger.info(`Sending broadcast to ${subscriptions.length} subscribers.`);
+        logger.info(`Sending broadcast to ${subscriptions.length} endpoints.`);
 
         // Send all notifications concurrently and count results
         const results = await Promise.all(subscriptions.map(sub => sendNotification(sub, payload)));
