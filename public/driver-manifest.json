@@ -3,11 +3,13 @@
   "name": "सब्ज़ीMATE Driver",
   "short_name": "Driver App",
   "start_url": "/driver",
+  "scope": "/driver",
   "display": "standalone",
   "background_color": "#f1f5f9",
   "theme_color": "#2563eb",
   "orientation": "portrait",
-  "description": "Driver portal for सब्ज़ीMATE.",
+  "description": "Driver portal for सब्ज़ीMATE. Manage deliveries, route navigation, and customer orders.",
+  "categories": ["business", "productivity", "navigation"],
   "icons": [
     {
       "src": "/logo.svg",
@@ -32,6 +34,15 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://images.unsplash.com/photo-1587049352851-d481dd123246?q=80&w=1740&auto=format&fit=crop",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Route Management"
     }
   ]
 }

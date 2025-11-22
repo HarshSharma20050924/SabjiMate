@@ -3,11 +3,13 @@
   "name": "सब्ज़ीMATE",
   "short_name": "सब्ज़ीMATE",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#059669",
   "orientation": "portrait",
-  "description": "Your daily fresh vegetable partner.",
+  "description": "Your daily fresh vegetable partner. Order fresh veggies, track deliveries, and manage your daily essentials.",
+  "categories": ["food", "shopping", "lifestyle"],
   "icons": [
     {
       "src": "/logo.svg",
@@ -32,6 +34,22 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "https://img.freepik.com/free-photo/fresh-vegetables-wooden-box-table-against-blurry-green-background_141793-16298.jpg",
+      "sizes": "1280x720",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "Fresh Vegetables Delivered"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1561155634-425b768a4d7a?q=80&w=1740&auto=format&fit=crop",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Easy Mobile Ordering"
     }
   ]
 }
