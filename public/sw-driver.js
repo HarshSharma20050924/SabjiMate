@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sabzimate-driver-cache-v2';
+const CACHE_NAME = 'sabzimate-driver-cache-v4';
 const urlsToCache = [
   '/driver.html',
   '/logo.svg',

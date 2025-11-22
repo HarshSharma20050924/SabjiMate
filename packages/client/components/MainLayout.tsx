@@ -9,6 +9,13 @@ import ConfirmationOverlay from '@common/components/ConfirmationOverlay';
 import { useStore, AppState } from '@client/store';
 import { getWebSocketUrl } from '@common/utils';
 
+// Define global interface for the window object
+declare global {
+  interface Window {
+    deferredPrompt: any;
+  }
+}
+
 // Lazy load screen components for code splitting
 const HomeScreen = lazy(() => import('./screens/HomeScreen'));
 const UrgentOrderScreen = lazy(() => import('./screens/UrgentOrderScreen'));
@@ -101,16 +108,24 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
 
   // --- PWA Install Prompt Handler ---
   useEffect(() => {
+    // Check if the event was already captured in index.html
+    if (window.deferredPrompt) {
+        console.log('PWA install prompt recovered from global scope.');
+        setInstallPrompt(window.deferredPrompt);
+    }
+
     const handler = (e: Event) => {
         e.preventDefault();
-        console.log('PWA install prompt captured.');
+        console.log('PWA install prompt captured (listener).');
         setInstallPrompt(e);
+        window.deferredPrompt = e;
     };
     window.addEventListener('beforeinstallprompt', handler);
     
     // Also check if app is already installed to potentially hide instructions
     window.addEventListener('appinstalled', () => {
         setInstallPrompt(null);
+        window.deferredPrompt = null;
         console.log('PWA was installed');
     });
 
@@ -137,6 +152,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ user, language, setLanguage }) 
             console.log('User dismissed the install prompt');
         }
         setInstallPrompt(null); // The prompt can only be used once
+        window.deferredPrompt = null;
     });
   };
 

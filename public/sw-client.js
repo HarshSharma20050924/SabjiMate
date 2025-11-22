@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sabzimate-client-cache-v2'; // Cache version incremented
+const CACHE_NAME = 'sabzimate-client-cache-v4'; // Incremented to v4
 const urlsToCache = [
   '/',
   '/index.html',

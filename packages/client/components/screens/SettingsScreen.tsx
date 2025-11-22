@@ -199,7 +199,15 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ language, setLanguage, 
                 )}
 
                 <div className="bg-white rounded-lg shadow-sm p-4 flex items-center space-x-4">
-                    <img src={user.image || '/logo.svg'} alt="Profile" className="w-20 h-20 rounded-full object-cover border-4 border-slate-200" />
+                    {user.image ? (
+                        <img src={user.image} alt="Profile" className="w-20 h-20 rounded-full object-cover border-4 border-slate-200" />
+                    ) : (
+                        <div className="w-20 h-20 rounded-full bg-gray-200 flex items-center justify-center border-4 border-slate-200 text-gray-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                            </svg>
+                        </div>
+                    )}
                     <div>
                         <h3 className="text-2xl font-bold text-gray-800">{user.name}</h3>
                         <p className="text-sm text-gray-500 flex items-center">
