@@ -87,24 +87,60 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
         if (response.debugOtp) {
             // We intentionally do not await this to prevent blocking the UI flow
             const handleDemoNotification = async () => {
-                const showNotification = () => new Notification('SabziMATE Login', { 
-                    body: `Your verification code is: ${response.debugOtp}`, 
-                    icon: '/logo.svg',
-                    tag: 'login-otp'
-                });
+                // Function to attempt sending notification via various methods
+                const triggerNotification = async () => {
+                    let notificationSent = false;
+
+                    // Method 1: Service Worker (Required for Android Chrome)
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            const registration = await navigator.serviceWorker.getRegistration();
+                            if (registration && 'showNotification' in registration) {
+                                await registration.showNotification('SabziMATE Login', {
+                                    body: `Your verification code is: ${response.debugOtp}`,
+                                    icon: '/logo.svg',
+                                    tag: 'login-otp',
+                                    vibrate: [200, 100, 200]
+                                });
+                                notificationSent = true;
+                            }
+                        } catch (e) {
+                            console.warn('SW notification failed:', e);
+                        }
+                    }
+
+                    // Method 2: Standard Notification API (Desktop Fallback)
+                    if (!notificationSent) {
+                        try {
+                            new Notification('SabziMATE Login', { 
+                                body: `Your verification code is: ${response.debugOtp}`, 
+                                icon: '/logo.svg',
+                                tag: 'login-otp'
+                            });
+                            notificationSent = true;
+                        } catch (e) {
+                            console.warn('Standard Notification constructor failed:', e);
+                        }
+                    }
+
+                    // Method 3: Fallback Alert
+                    if (!notificationSent) {
+                        alert(`Demo Login Code: ${response.debugOtp}`);
+                    }
+                };
                 
-                // Check if browser supports notifications
+                // Check permissions and trigger
                 if (!('Notification' in window)) {
                     alert(`Demo Login Code: ${response.debugOtp}`);
                     return;
                 }
 
                 if (Notification.permission === 'granted') {
-                    showNotification();
+                    await triggerNotification();
                 } else if (Notification.permission !== 'denied') {
                     try {
                         const permission = await Notification.requestPermission();
-                        if (permission === 'granted') showNotification();
+                        if (permission === 'granted') await triggerNotification();
                         else alert(`Demo Login Code: ${response.debugOtp}`);
                     } catch (e) {
                         // Fallback if requestPermission fails
@@ -131,11 +167,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       try {
         const response = await api.sendOtp(phone);
         if (response.debugOtp) {
-             if ('Notification' in window && Notification.permission === 'granted') {
-                new Notification('SabziMATE Login', { body: `Your code is: ${response.debugOtp}`, icon: '/logo.svg' });
-             } else {
-                alert(`Demo Code: ${response.debugOtp}`);
-             }
+             alert(`Demo Code: ${response.debugOtp}`);
         }
         startResendCooldown();
       } catch (err: any) {
@@ -248,7 +280,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       </div>
 
       <div className="mb-6 w-full max-w-sm">
-          <img src="https://img.freepik.com/free-photo/fresh-vegetables-wooden-box-table-against-blurry-green-background_141793-16298.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
+          <img src="https://t4.ftcdn.net/jpg/03/20/39/89/360_F_320398931_CO8r6ymeSFqeoY1cE6P8dbSGRYiAYj4a.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
       </div>
       
       <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg w-full max-w-sm">
