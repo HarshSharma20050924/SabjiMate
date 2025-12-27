@@ -453,6 +453,11 @@ For support, email harsh20050924@gmail.com
 
 *"From farm to kitchen, intelligently delivered."*
 
-[![SabziMATE Logo](https://raw.githubusercontent.com/HarshSharma20050924/SabjiMate/main/logo.svg)](https://sabjimate.vercel.app/)
+<p align="center">
+  <a href="https://sabjimate.vercel.app/" target="_blank">
+    <img src="https://raw.githubusercontent.com/HarshSharma20050924/SabjiMate/main/logo.svg" alt="SabziMATE Demo" width="400"/>
+  </a>
+</p>
+<p align="center"><em>Click on the image for the live demo</em></p>
 
 
