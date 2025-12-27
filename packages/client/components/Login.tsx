@@ -77,28 +77,46 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
     try {
         const response = await api.sendOtp(phone);
         
-        // Handle Demo/Test OTP via Notification
-        if (response.debugOtp) {
-            const showNotification = () => new Notification('SabziMATE Login', { 
-                body: `Your verification code is: ${response.debugOtp}`, 
-                icon: '/logo.svg',
-                tag: 'login-otp'
-            });
-            
-            if (Notification.permission === 'granted') {
-                showNotification();
-            } else if (Notification.permission !== 'denied') {
-                await Notification.requestPermission().then(p => {
-                    if (p === 'granted') showNotification();
-                    else alert(`Demo Login Code: ${response.debugOtp}`);
-                });
-            } else {
-                alert(`Demo Login Code: ${response.debugOtp}`);
-            }
-        }
-
+        // Critical Fix: Update UI state immediately before attempting notifications.
+        // Mobile browsers (esp iOS) may block or hang on Notification.requestPermission()
+        // if the user gesture context is lost after the await.
         setStep('otp');
         startResendCooldown();
+
+        // Handle Demo/Test OTP via Notification
+        if (response.debugOtp) {
+            // We intentionally do not await this to prevent blocking the UI flow
+            const handleDemoNotification = async () => {
+                const showNotification = () => new Notification('SabziMATE Login', { 
+                    body: `Your verification code is: ${response.debugOtp}`, 
+                    icon: '/logo.svg',
+                    tag: 'login-otp'
+                });
+                
+                // Check if browser supports notifications
+                if (!('Notification' in window)) {
+                    alert(`Demo Login Code: ${response.debugOtp}`);
+                    return;
+                }
+
+                if (Notification.permission === 'granted') {
+                    showNotification();
+                } else if (Notification.permission !== 'denied') {
+                    try {
+                        const permission = await Notification.requestPermission();
+                        if (permission === 'granted') showNotification();
+                        else alert(`Demo Login Code: ${response.debugOtp}`);
+                    } catch (e) {
+                        // Fallback if requestPermission fails
+                        alert(`Demo Login Code: ${response.debugOtp}`);
+                    }
+                } else {
+                    alert(`Demo Login Code: ${response.debugOtp}`);
+                }
+            };
+            handleDemoNotification();
+        }
+
     } catch (err: any) {
         setError(err.message || 'Failed to send OTP. Please try again.');
     } finally {
@@ -113,7 +131,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       try {
         const response = await api.sendOtp(phone);
         if (response.debugOtp) {
-             if (Notification.permission === 'granted') {
+             if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification('SabziMATE Login', { body: `Your code is: ${response.debugOtp}`, icon: '/logo.svg' });
              } else {
                 alert(`Demo Code: ${response.debugOtp}`);
@@ -230,7 +248,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       </div>
 
       <div className="mb-6 w-full max-w-sm">
-          <img src="https://t4.ftcdn.net/jpg/03/20/39/89/360_F_320398931_CO8r6ymeSFqeoY1cE6P8dbSGRYiAYj4a.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
+          <img src="https://img.freepik.com/free-photo/fresh-vegetables-wooden-box-table-against-blurry-green-background_141793-16298.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
       </div>
       
       <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg w-full max-w-sm">
