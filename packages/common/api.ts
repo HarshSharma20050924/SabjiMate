@@ -1,4 +1,5 @@
 
+
 import {
   User,
   Vegetable,
@@ -103,7 +104,8 @@ const apiFetch = async (url: string, options: RequestInit = {}): Promise<Respons
 // --- API Function Implementations ---
 // Client-facing APIs
 export const getDeliveryAreas = async (): Promise<DeliveryArea[]> => apiFetch('/api/delivery-areas').then(res => res.json());
-export const sendOtp = async (phone: string): Promise<void> => { await apiFetch('/api/auth/send-otp', { method: 'POST', body: JSON.stringify({ phone }) }); };
+// Updated return type for sendOtp to allow handling debugOtp in demo mode
+export const sendOtp = async (phone: string): Promise<{ message: string, debugOtp?: string }> => apiFetch('/api/auth/send-otp', { method: 'POST', body: JSON.stringify({ phone }) }).then(res => res.json());
 export const verifyOtp = async (phone: string, otp: string): Promise<{ accessToken: string, refreshToken: string, user: User }> => apiFetch('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ phone, otp }) }).then(res => res.json());
 export const updateUser = async (user: User): Promise<User> => apiFetch('/api/users/me', { method: 'PUT', body: JSON.stringify(user) }).then(res => res.json());
 export const reverseGeocode = async (lat: number, lon: number): Promise<{ address: string, city: string, state: string }> => apiFetch('/api/ai/reverse-geocode', { method: 'POST', body: JSON.stringify({ lat, lon }) }).then(res => res.json());
@@ -132,7 +134,7 @@ export const logoutUser = async (): Promise<void> => { await apiFetch('/api/auth
 // --- Notification & Support APIs ---
 export const getVapidPublicKey = async (): Promise<string> => apiFetch('/api/notifications/vapidPublicKey', { method: 'GET' }).then(res => res.text());
 export const subscribeToPush = async (subscription: PushSubscription): Promise<void> => { await apiFetch('/api/notifications/subscribe', { method: 'POST', body: JSON.stringify(subscription) }); };
-export const broadcastNotification = async (title: string, body: string): Promise<{ count: number }> => apiFetch('/api/admin/notifications/broadcast', { method: 'POST', body: JSON.stringify({ title, body }) }).then(res => res.json());
+export const broadcastNotification = async (title: string, body: string): Promise<{ count: number, failed: number, total: number }> => apiFetch('/api/admin/notifications/broadcast', { method: 'POST', body: JSON.stringify({ title, body }) }).then(res => res.json());
 export const getNotifications = async (): Promise<AppNotification[]> => apiFetch('/api/notifications').then(res => res.json());
 export const markNotificationRead = async (id: number): Promise<void> => { await apiFetch(`/api/notifications/${id}/read`, { method: 'PUT' }); };
 export const createSupportTicket = async (subject: string, message: string): Promise<SupportTicket> => apiFetch('/api/support', { method: 'POST', body: JSON.stringify({ subject, message }) }).then(res => res.json());

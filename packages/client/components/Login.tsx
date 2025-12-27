@@ -1,7 +1,7 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { Language } from '@common/types';
 import { translations } from '@common/constants';
-import { AuthContext } from '@common/AuthContext';
+import { AuthContext, AuthContextType } from '@common/AuthContext';
 import * as api from '@common/api';
 
 interface LoginProps {
@@ -13,7 +13,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
   const [showLanguagePicker, setShowLanguagePicker] = useState(true);
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const t = translations[language];
-  const auth = useContext(AuthContext);
+  const auth = useContext(AuthContext) as AuthContextType;
 
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(''));
@@ -75,7 +75,28 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
     setError('');
     setIsSendingOtp(true);
     try {
-        await api.sendOtp(phone);
+        const response = await api.sendOtp(phone);
+        
+        // Handle Demo/Test OTP via Notification
+        if (response.debugOtp) {
+            const showNotification = () => new Notification('SabziMATE Login', { 
+                body: `Your verification code is: ${response.debugOtp}`, 
+                icon: '/logo.svg',
+                tag: 'login-otp'
+            });
+            
+            if (Notification.permission === 'granted') {
+                showNotification();
+            } else if (Notification.permission !== 'denied') {
+                await Notification.requestPermission().then(p => {
+                    if (p === 'granted') showNotification();
+                    else alert(`Demo Login Code: ${response.debugOtp}`);
+                });
+            } else {
+                alert(`Demo Login Code: ${response.debugOtp}`);
+            }
+        }
+
         setStep('otp');
         startResendCooldown();
     } catch (err: any) {
@@ -90,7 +111,14 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       setError('');
       setOtp(new Array(6).fill(''));
       try {
-        await api.sendOtp(phone);
+        const response = await api.sendOtp(phone);
+        if (response.debugOtp) {
+             if (Notification.permission === 'granted') {
+                new Notification('SabziMATE Login', { body: `Your code is: ${response.debugOtp}`, icon: '/logo.svg' });
+             } else {
+                alert(`Demo Code: ${response.debugOtp}`);
+             }
+        }
         startResendCooldown();
       } catch (err: any) {
         setError(err.message || 'Failed to resend OTP.');
@@ -202,7 +230,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       </div>
 
       <div className="mb-6 w-full max-w-sm">
-          <img src="https://t4.ftcdn.net/jpg/03/20/39/89/360_F_320398931_CO8r6ymeSFqeoY1cE6P8dbSGRYiAYj4a.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
+          <img src="https://img.freepik.com/free-photo/fresh-vegetables-wooden-box-table-against-blurry-green-background_141793-16298.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
       </div>
       
       <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg w-full max-w-sm">
@@ -250,7 +278,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
                             {otp.map((digit, index) => (
                                 <input
                                     key={index}
-                                    ref={el => otpInputsRef.current[index] = el!}
+                                    ref={el => { otpInputsRef.current[index] = el!; }}
                                     type="tel"
                                     maxLength={1}
                                     value={digit}
