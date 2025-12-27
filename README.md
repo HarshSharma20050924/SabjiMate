@@ -425,7 +425,8 @@ git push origin feature/amazing-feature
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the [AGPL-3.0 License](https://github.com/HarshSharma20050924/SabjiMate/blob/main/LICENSE) - see the LICENSE file for details.
+
 
 ## 👥 Team
 
