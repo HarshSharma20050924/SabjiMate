@@ -28,13 +28,13 @@ export default defineConfig({
       // This tells Vite to forward any request starting with /api
       // to your backend server running on port 3001.
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:4000',
         changeOrigin: true,
         secure: false,      
       },
       // Proxy WebSocket connections on the /socket path to the backend server
       '/socket': {
-        target: 'ws://localhost:3001',
+        target: 'ws://localhost:4000',
         ws: true,
       },
     }

@@ -3,6 +3,7 @@ import multer from 'multer';
 import { GoogleGenAI, Type, GenerateContentResponse, Content } from '@google/genai';
 import logger from '../logger';
 import { ChatMessage } from '../../../common/types';
+import { reverseGeocode } from '../services/geocoding';
 
 const router = Router();
 const upload = multer({ 
@@ -132,66 +133,13 @@ router.post('/reverse-geocode', async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Latitude and longitude are required.' });
     }
 
-    if (!process.env.API_KEY) {
-        logger.error("Gemini API key is not configured for reverse geocoding.");
-        return res.status(500).json({ error: 'Server is not configured for geocoding service.' });
-    }
-
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `You are an expert reverse geocoding system. Your task is to identify the most precise address components for the given coordinates: latitude ${lat}, longitude ${lon}. Do not generalize or guess a larger city if a more specific locality is available. Your response must be in the following exact format, with no extra text or explanations:
-Address: [The most detailed street address, including house number, street name, and sub-locality if available]
-City: [The most specific city, town, or village name]
-State: [The state name]`;
+        // Switch to using Nominatim (OpenStreetMap) via our internal service
+        // This is free and does not require the Gemini API Key or Maps Tool
+        const addressDetails = await reverseGeocode(parseFloat(lat), parseFloat(lon));
 
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                tools: [{ googleMaps: {} }],
-                toolConfig: {
-                    retrievalConfig: {
-                        latLng: {
-                            latitude: parseFloat(lat),
-                            longitude: parseFloat(lon)
-                        }
-                    }
-                }
-            },
-        });
-
-        const text = response.text;
-        if (!text) {
-            throw new Error('No response from AI for reverse geocoding.');
-        }
-
-        const addressDetails: { address: string; city: string; state: string; } = { address: '', city: '', state: '' };
-        const lines = text.split('\n');
-        lines.forEach(line => {
-            if (line.startsWith('Address:')) {
-                addressDetails.address = line.replace('Address:', '').trim();
-            } else if (line.startsWith('City:')) {
-                addressDetails.city = line.replace('City:', '').trim();
-            } else if (line.startsWith('State:')) {
-                addressDetails.state = line.replace('State:', '').trim();
-            }
-        });
-
-        if (!addressDetails.address || !addressDetails.city || !addressDetails.state) {
-            logger.warn({ response: text }, "Could not parse all fields from reverse geocoding response. Trying to use grounding metadata.");
-            // Fallback to grounding metadata title if parsing fails
-            const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
-            if (groundingChunks && groundingChunks.length > 0 && 'maps' in groundingChunks[0]) {
-                // Assert the type to inform TypeScript about the object's structure
-                const mapsChunk = groundingChunks[0] as { maps: { title: string } };
-                const title = mapsChunk.maps.title;
-                if(title && !addressDetails.address) {
-                    addressDetails.address = title;
-                }
-            }
-             if (!addressDetails.address) {
-                 throw new Error('Could not determine address from AI response.');
-             }
+        if (!addressDetails) {
+            throw new Error('Could not determine address from location service.');
         }
         
         res.json(addressDetails);

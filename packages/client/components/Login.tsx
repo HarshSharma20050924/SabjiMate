@@ -230,7 +230,7 @@ const Login: React.FC<LoginProps> = ({ language, setLanguage }) => {
       </div>
 
       <div className="mb-6 w-full max-w-sm">
-          <img src="https://img.freepik.com/free-photo/fresh-vegetables-wooden-box-table-against-blurry-green-background_141793-16298.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
+          <img src="https://t4.ftcdn.net/jpg/03/20/39/89/360_F_320398931_CO8r6ymeSFqeoY1cE6P8dbSGRYiAYj4a.jpg" alt="Fresh vegetables in a crate" className="rounded-2xl shadow-lg w-full"/>
       </div>
       
       <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-lg w-full max-w-sm">

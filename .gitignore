@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 # Environment files
+vegetable1
 .env
 .env.development
 .env.production
